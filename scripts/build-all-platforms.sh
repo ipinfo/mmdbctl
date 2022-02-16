@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build binary for all platforms for cli $1 & version $2.
+# Build binary for all platforms for version $1.
 
 set -e
 

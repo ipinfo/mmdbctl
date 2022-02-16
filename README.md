@@ -1,5 +1,5 @@
-# [<img src="https://ipinfo.io/static/ipinfo-small.svg" alt="IPinfo" width="24"/>](https://ipinfo.io/) IPinfo mmdbctl
-mmdb control cli by [IPinfo.io](https://ipinfo.io) that provides you 
+# [<img src="https://ipinfo.io/static/ipinfo-small.svg" alt="IPinfo" width="24"/>](https://ipinfo.io/) IPinfo MMDBCTL
+mmdbctl` is a MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you 
 the following features:
 
 - read data for IPs in an mmdb file.
@@ -10,7 +10,116 @@ the following features:
 - check that the mmdb file is not corrupted or invalid.
 
 ## Installation
+
+The `mmdbctl` CLI is available for download via multiple mechanisms.
+
+### macOS
+
+Install the latest `amd64` version:
+
+```bash
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/macos.sh | sh
+```
+
+### Debian / Ubuntu (amd64)
+
+
+```bash
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/deb.sh | sh
+```
+
+OR
+
+```bash
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbctl_1.0.0.deb
+sudo dpkg -i mmdbctl_2.7.0.deb
+```
+
+### Windows Powershell
+
+*Note*: run powershell as administrator before executing this command.
+
+```bash
+iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/windows.ps1 | iex
+```
+
+### Using `go get`
+
+Make sure that `$GOPATH/bin` is in your `$PATH`, because that's where this gets
+installed:
+
+```bash
+go get github.com/ipinfo/mmdbctl
+```
+
+### Using `curl`/`wget`
+
+The pre-built binaries for all platforms are available on GitHub via artifacts
+in releases. You need to simply download, unpack and move them to your shell's
+binary search path.
+
+The following OS & arch combinations are supported (if you use one not listed
+on here, please open an issue):
+
+```
+darwin_amd64
+darwin_arm64
+dragonfly_amd64
+freebsd_386
+freebsd_amd64
+freebsd_arm
+freebsd_arm64
+linux_386
+linux_amd64
+linux_arm
+linux_arm64
+netbsd_386
+netbsd_amd64
+netbsd_arm
+netbsd_arm64
+openbsd_386
+openbsd_amd64
+openbsd_arm
+openbsd_arm64
+solaris_amd64
+windows_386
+windows_amd64
+windows_arm
+```
+
+After choosing a platform `PLAT` from above, run:
+
+```bash
+# for Windows, use ".zip" instead of ".tar.gz"
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbctl_1.0.0_${PLAT}.tar.gz
+# OR
+wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbctl_1.0.0_${PLAT}.tar.gz
+tar -xvf mmdbctl_1.0.0_${PLAT}.tar.gz
+mv mmdbctl_1.0.0_${PLAT} /usr/local/bin/ipinfo
+```
+
 ### Using `git`
+
+Installing from source requires at least the Golang version specified in
+`go.mod`. You can install the Golang toolchain from
+[the official site](https://golang.org/doc/install).
+
+Once the correct Golang version is installed, simply clone the repository and
+install the binary:
+
+```bash
+git clone https://github.com/ipinfo/mmdbctl
+cd mmdbctl
+go install .
+$GOPATH/bin/mmdbctl
+```
+
+You can add `$GOPATH/bin` to your `$PATH` to access `mmdbctl` directly from
+anywhere.
+
+Alternatively, you can do the following to output the binary somewhere
+specific:
+
 ```bash
 git clone https://github.com/ipinfo/mmdbctl
 cd mmdbctl
