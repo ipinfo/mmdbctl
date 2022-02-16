@@ -1,5 +1,5 @@
 # [<img src="https://ipinfo.io/static/ipinfo-small.svg" alt="IPinfo" width="24"/>](https://ipinfo.io/) IPinfo MMDBCTL
-mmdbctl` is a MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you 
+`mmdbctl` is a MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you 
 the following features:
 
 - read data for IPs in an mmdb file.
