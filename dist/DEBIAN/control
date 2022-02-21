@@ -8,4 +8,4 @@ Vcs-browser: https://github.com/ipinfo/mmdbctl
 Homepage: https://ipinfo.io
 Package: mmdbctl
 Architecture: amd64
-Description: mmdbctl` is a MMDB file management CLI by IPinfo.
+Description: mmdbctl is an MMDB file management CLI by IPinfo.

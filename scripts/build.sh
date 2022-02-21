@@ -7,3 +7,4 @@ ROOT=$DIR/..
 
 go build                                                                \
     -o $ROOT/build/                                                     \
+    $ROOT/

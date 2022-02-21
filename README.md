@@ -1,13 +1,14 @@
 # [<img src="https://ipinfo.io/static/ipinfo-small.svg" alt="IPinfo" width="24"/>](https://ipinfo.io/) IPinfo MMDBCTL
-`mmdbctl` is a MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you 
+
+`mmdbctl` is an MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you
 the following features:
 
-- read data for IPs in an mmdb file.
-- import data in non-mmdb format into mmdb.
-- export data from mmdb format into non-mmdb format.
-- see the difference between two mmdb files.
-- print metadata from the mmdb file.
-- check that the mmdb file is not corrupted or invalid.
+- Read data for IPs in an MMDB file.
+- Import data in non-MMDB format into MMDB.
+- Export data from MMDB format into non-MMDB format.
+- See the difference between two MMDB files.
+- Print the metadata of an MMDB file.
+- Check that an MMDB file is not corrupted or invalid.
 
 ## Installation
 
@@ -22,7 +23,6 @@ curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/macos
 ```
 
 ### Debian / Ubuntu (amd64)
-
 
 ```bash
 curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/deb.sh | sh
@@ -95,7 +95,7 @@ curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbc
 # OR
 wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbctl_1.0.0_${PLAT}.tar.gz
 tar -xvf mmdbctl_1.0.0_${PLAT}.tar.gz
-mv mmdbctl_1.0.0_${PLAT} /usr/local/bin/ipinfo
+mv mmdbctl_1.0.0_${PLAT} /usr/local/bin/mmdbctl
 ```
 
 ### Using `git`
@@ -127,6 +127,7 @@ go build -o <path> .
 ```
 
 Replace `<path>` with the required location.
+
 ## Quick Start
 
 This will help you quickly get started with the `mmdbctl` CLI.

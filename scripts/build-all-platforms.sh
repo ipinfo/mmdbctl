@@ -50,7 +50,8 @@ do
     echo "building ${output}"
     GOOS=$os GOARCH=$arch go build                                            \
         -o $ROOT/build/${output}                                              \
-
+        $ROOT
+        
 done
 
 wait
