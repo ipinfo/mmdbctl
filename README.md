@@ -32,7 +32,7 @@ OR
 
 ```bash
 curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.0.0/mmdbctl_1.0.0.deb
-sudo dpkg -i mmdbctl_2.7.0.deb
+sudo dpkg -i mmdbctl_1.0.0.deb
 ```
 
 ### Windows Powershell
