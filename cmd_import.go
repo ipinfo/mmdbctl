@@ -119,7 +119,7 @@ Options:
   Meta:
     --ip <4 | 6>
       output file's ip version.
-      default: 4.
+      default: 6.
     -s, --size <24 | 28 | 32>
       size of records in the mmdb tree.
       default: 32.
@@ -180,7 +180,7 @@ func cmdImport() error {
 	pflag.BoolVar(&fJoinKeyCol, "joinkey-col", false, _h)
 	pflag.BoolVar(&fNoFields, "no-fields", false, _h)
 	pflag.BoolVar(&fNoNetwork, "no-network", false, _h)
-	pflag.IntVar(&fIp, "ip", 4, _h)
+	pflag.IntVar(&fIp, "ip", 6, _h)
 	pflag.IntVarP(&fSize, "size", "s", 32, _h)
 	pflag.StringVarP(&fMerge, "merge", "m", "none", _h)
 	pflag.BoolVar(&fIgnoreEmptyVals, "ignore-empty-values", false, _h)
@@ -388,8 +388,20 @@ func cmdImport() error {
 			}
 
 			networkStr := parts[0]
+
+			// convert 2 IPs into IP range?
 			if fRangeMultiCol {
 				networkStr = parts[0] + "-" + parts[1]
+			}
+
+			// add network part to single-IP network if it's missing.
+			isNetworkRange := strings.Contains(networkStr, "-")
+			if !isNetworkRange && !strings.Contains(networkStr, "/") {
+				if fIp == 6 && strings.Contains(networkStr, ":") {
+					networkStr += "/128"
+				} else {
+					networkStr += "/32"
+				}
 			}
 
 			// prep record.
@@ -402,7 +414,7 @@ func cmdImport() error {
 			}
 
 			// range insertion or cidr insertion?
-			if strings.Contains(networkStr, "-") {
+			if isNetworkRange {
 				networkStrParts := strings.Split(networkStr, "-")
 				startIp := net.ParseIP(networkStrParts[0])
 				endIp := net.ParseIP(networkStrParts[1])
@@ -413,14 +425,6 @@ func cmdImport() error {
 					)
 				}
 			} else {
-				// add network part to single-IP network if it's missing.
-				if !strings.Contains(networkStr, "/") {
-					if fIp == 6 && strings.Contains(networkStr, ":") {
-						networkStr += "/128"
-					} else {
-						networkStr += "/32"
-					}
-				}
 				_, network, err := net.ParseCIDR(networkStr)
 				if err != nil {
 					return fmt.Errorf(
@@ -470,6 +474,16 @@ func cmdImport() error {
 				}
 			}
 
+			// add network part to single-IP network if it's missing.
+			isNetworkRange := strings.Contains(networkStr, "-")
+			if !isNetworkRange && !strings.Contains(networkStr, "/") {
+				if fIp == 6 && strings.Contains(networkStr, ":") {
+					networkStr += "/128"
+				} else {
+					networkStr += "/32"
+				}
+			}
+
 			// prep record.
 			record := mmdbtype.Map{}
 			if !fNoNetwork {
@@ -480,7 +494,7 @@ func cmdImport() error {
 			}
 
 			// range insertion or cidr insertion?
-			if strings.Contains(networkStr, "-") {
+			if isNetworkRange {
 				networkStrParts := strings.Split(networkStr, "-")
 				startIp := net.ParseIP(networkStrParts[0])
 				endIp := net.ParseIP(networkStrParts[1])
@@ -491,14 +505,6 @@ func cmdImport() error {
 					)
 				}
 			} else {
-				// add network part to single-IP network if it's missing.
-				if !strings.Contains(networkStr, "/") {
-					if fIp == 6 && strings.Contains(networkStr, ":") {
-						networkStr += "/128"
-					} else {
-						networkStr += "/32"
-					}
-				}
 				_, network, err := net.ParseCIDR(networkStr)
 				if err != nil {
 					return fmt.Errorf(
