@@ -43,13 +43,13 @@ sudo dpkg -i mmdbctl_1.1.0.deb
 iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.1.0/windows.ps1 | iex
 ```
 
-### Using `go get`
+### Using `go install`
 
 Make sure that `$GOPATH/bin` is in your `$PATH`, because that's where this gets
 installed:
 
 ```bash
-go get github.com/ipinfo/mmdbctl
+go install github.com/ipinfo/mmdbctl@latest
 ```
 
 ### Using `curl`/`wget`
