@@ -110,6 +110,7 @@ Options:
       default: false.
     --no-fields
       specify that no fields exist except the implicit network field.
+      when enabled, --no-network has no effect; the network field is written.
       default: false.
     --no-network
       if --fields-from-header is set, then don't write the network field, which
@@ -257,6 +258,7 @@ func cmdImport() error {
 	}
 	if fNoFields {
 		fFields = []string{}
+		fNoNetwork = false
 	} else if !fFieldsFromHdr && (fFields == nil || len(fFields) == 0) {
 		fFieldsFromHdr = true
 	}
