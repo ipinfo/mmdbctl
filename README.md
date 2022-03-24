@@ -138,6 +138,187 @@ By default, invoking the CLI shows a help message:
 
 ![mmdbctl](images/help.png)
 
+### Reading
+
+You can read from MMDB files in various different ways - as individual IPs,
+CIDRs or IP ranges, coming from the command line as arguments, or from files,
+or from stdin.
+
+Pretty JSON format:
+
+```bash
+$ mmdbctl read -f json-pretty 8.8.8.8 location.mmdb
+{
+  "city": "Mountain View",
+  "country": "US",
+  "geoname_id": "5375480",
+  "latitude": "37.4056",
+  "longitude": "-122.0775",
+  "postalcode": "94043",
+  "region": "California",
+  "timezone": "America/Los_Angeles"
+}
+```
+
+CSV format:
+
+```bash
+$ mmdbctl read -f csv 8.8.8.8 location.mmdb
+ip,city,country,geoname_id,latitude,longitude,postalcode,region,timezone
+8.8.8.8,Mountain View,US,5375480,37.4056,-122.0775,94043,California,America/Los_Angeles
+```
+
+TSV format:
+
+```bash
+$ mmdbctl read -f tsv 8.8.8.8 location.mmdb
+ip	city	country	geoname_id	latitude	longitude	postalcode	region	timezone
+8.8.8.8	Mountain View	US	5375480	37.4056	-122.0775	94043	California	America/Los_Angeles
+```
+
+Via a file:
+
+```bash
+$ cat ips.txt
+8.8.8.8
+8.8.8.0/31
+8.8.8.0-8.8.8.1
+8.8.8.0,8.8.8.1
+
+$ mmdbctl read ips.txt location.mmdb | sort -u
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+```
+
+Via stdin:
+
+```bash
+$ echo 8.8.8.8 | mmdbctl read location.mmdb
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+```
+
+Multiple inputs are also possible - these all return the same thing:
+
+```bash
+$ echo -e '8.8.8.8\n1.2.3.4' | mmdbctl read location.mmdb
+$ mmdbctl read 8.8.8.8 1.2.3.4 location.mmdb
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+{"city":"Brisbane","country":"AU","geoname_id":"2174003","latitude":"-27.48203","longitude":"153.01358","postalcode":"4101","region":"Queensland","timezone":"Australia/Brisbane"}
+```
+
+Can check CIDRs and ranges - these will all return the same thing:
+
+```bash
+$ mmdbctl read 8.8.8.0/31 location.mmdb
+$ mmdbctl read 8.8.8.0-8.8.8.1 location.mmdb
+$ mmdbctl read 8.8.8.0,8.8.8.1 location.mmdb
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+{"city":"Mountain View","country":"US","geoname_id":"5375480","latitude":"37.4056","longitude":"-122.0775","postalcode":"94043","region":"California","timezone":"America/Los_Angeles"}
+```
+
+### Importing
+
+Importing allows taking in files as CSV/TSV/JSON, and outputting an MMDB file.
+
+Importing is one of the most powerful/flexible features in `mmdbctl`. However,
+we only allow strings throughout the data at the current time.
+
+See `mmdbctl import --help` for full details on usage.
+
+Here are some basic examples:
+
+```bash
+# basic CSV importing into MMDB.
+$ mmdbctl import --in data.csv --out data.mmdb
+
+# generate MMDB from a TSV file containing IPv4 data.
+$ cat data.tsv | mmdbctl import --ip 4 --tsv --out data.mmdb
+
+# don't include the implicit `network` field in the output MMDB:
+$ mmdbctl import --no-network --in data.csv --out data.mmdb
+
+# generate an MMDB without any fields, just IP ranges that meet a criteria.
+$ mmdbctl import                                                              \
+    --size 24 --no-fields --ip 4                                              \
+    --in anycast.csv --out anycast.mmdb
+```
+
+### Exporting
+
+Exporting allows taking in an MMDB file and outputting CSV/TSV/JSON.
+
+See `mmdbctl export --help` for full details on usage.
+
+```bash
+# basic export.
+$ mmdbctl export data.mmdb data.csv
+
+# basic export without a header.
+$ mmdbctl export --no-header data.mmdb data.csv
+
+# just see the number of entries it'd output.
+$ mmdbctl export --no-header --format csv data.mmdb | wc -l
+```
+
+### Metadata
+
+You can retrieve data in the `metadata` section of the MMDB file using the
+`metadata` subcommand.
+
+Pretty format:
+
+```bash
+$ mmdbctl metadata location.mmdb
+- Binary Format 2.0
+- Database Type ipinfo location.mmdb
+- IP Version    4
+- Record Size   32
+- Node Count    123456789
+- Description
+    en ipinfo location.mmdb
+- Languages     en
+- Build Epoch   123456789
+```
+
+JSON format:
+
+```bash
+$ mmdbctl metadata -f json location.mmdb
+{
+    "binary_format": "2.0",
+    "db_type": "ipinfo location.mmdb",
+    "ip": 4,
+    "record_size": 32,
+    "node_count": 123456789,
+    "description": {
+        "en": "ipinfo location.mmdb"
+    },
+    "languages": [
+        "en"
+    ],
+    "build_epoch": 123456789
+}
+```
+
+### Verification
+
+You can verify if a MMDB file is correctly structured with the `verify`
+subcommand:
+
+```bash
+$ mmdbctl verify location.mmdb
+valid
+```
+
+Let's force it to be invalid and check again:
+
+```bash
+$ cp location.mmdb location-tmp.mmdb
+$ cat location.mmdb >> location-tmp.mmdb
+$ mmdbctl verify location-tmp.mmdb
+invalid: received decoding error (the MaxMind DB file's data section contains bad data (uint16 size of 11)) at offset of 13825601
+```
+
 ## Auto-Completion
 
 Auto-completion is supported for at least the following shells:
