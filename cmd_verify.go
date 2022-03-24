@@ -55,7 +55,7 @@ func cmdVerify() error {
 	// verify.
 	err = db.Verify()
 	if err != nil {
-		fmt.Printf("invalid: %w\n", err)
+		fmt.Printf("invalid: %v\n", err)
 	} else {
 		fmt.Println("valid")
 	}
