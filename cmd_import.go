@@ -66,6 +66,10 @@ Options:
     --help, -h
       show help.
 
+  Example:
+    # Imports an input file and outputs an mmdb file with default configurations. 
+    $ %[1]s import input.csv output.mmdb
+
   Input/Output:
     -i <fname>, --in <fname>
       input file name. (e.g. data.csv or - for stdin)
@@ -194,6 +198,14 @@ func cmdImport() error {
 	if fHelp || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
 		printHelpImport()
 		return nil
+	}
+
+	// optional input as 1st argument.
+	if strings.HasSuffix(pflag.Arg(1), ".csv") ||
+		strings.HasSuffix(pflag.Arg(1), ".tsv") ||
+		strings.HasSuffix(pflag.Arg(1), ".json") {
+		fIn = pflag.Arg(1)
+		fOut = pflag.Arg(2)
 	}
 
 	// validate IP version.
