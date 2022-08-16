@@ -200,7 +200,7 @@ func cmdImport() error {
 		return nil
 	}
 
-	// optional input as 1st argument.
+	// optional input as 1st and output as 2nd argument.
 	if strings.HasSuffix(pflag.Arg(1), ".csv") ||
 		strings.HasSuffix(pflag.Arg(1), ".tsv") ||
 		strings.HasSuffix(pflag.Arg(1), ".json") {
