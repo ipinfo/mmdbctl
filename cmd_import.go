@@ -59,7 +59,11 @@ var completionsImport = &complete.Command{
 
 func printHelpImport() {
 	fmt.Printf(
-		`Usage: %s import [<opts>]
+		`Usage: %s import [<opts>] [<input>] [<output>]
+
+Example:
+  # Imports an input file and outputs an mmdb file with default configurations. 
+  $ %[1]s import input.csv output.mmdb
 
 Options:
   General:
@@ -194,6 +198,12 @@ func cmdImport() error {
 	if fHelp || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
 		printHelpImport()
 		return nil
+	}
+
+	// optional input as 1st and output as 2nd argument.
+	if pflag.NArg() >= 2 {
+		fIn = pflag.Arg(1)
+		fOut = pflag.Arg(2)
 	}
 
 	// validate IP version.
