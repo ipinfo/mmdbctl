@@ -59,16 +59,16 @@ var completionsImport = &complete.Command{
 
 func printHelpImport() {
 	fmt.Printf(
-		`Usage: %s import [<opts>]
+		`Usage: %s import [<opts>] [<input>] [<output>]
+
+Example:
+  # Imports an input file and outputs an mmdb file with default configurations. 
+  $ %[1]s import input.csv output.mmdb
 
 Options:
   General:
     --help, -h
       show help.
-
-  Example:
-    # Imports an input file and outputs an mmdb file with default configurations. 
-    $ %[1]s import input.csv output.mmdb
 
   Input/Output:
     -i <fname>, --in <fname>
@@ -201,9 +201,7 @@ func cmdImport() error {
 	}
 
 	// optional input as 1st and output as 2nd argument.
-	if strings.HasSuffix(pflag.Arg(1), ".csv") ||
-		strings.HasSuffix(pflag.Arg(1), ".tsv") ||
-		strings.HasSuffix(pflag.Arg(1), ".json") {
+	if pflag.NArg() >= 2 {
 		fIn = pflag.Arg(1)
 		fOut = pflag.Arg(2)
 	}
