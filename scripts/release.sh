@@ -33,7 +33,7 @@ cd ..
 rm -rf $ROOT/dist/usr
 mkdir -p $ROOT/dist/usr/local/bin
 cp $ROOT/build/mmdbctl_${VSN}_linux_amd64 dist/usr/local/bin/mmdbctl
-dpkg-deb --build $ROOT/dist build/mmdbctl_${VSN}.deb
+dpkg-deb -Zgzip --build $ROOT/dist build/mmdbctl_${VSN}.deb
 
 # release
 gh release create mmdbctl-${VSN}                                               \
