@@ -171,6 +171,7 @@ func cmdExport() error {
 		}
 	} else if fFormat == "json" {
 		networks := db.Networks(maxminddb.SkipAliasedNetworks)
+		enc := json.NewEncoder(outFile)
 		for networks.Next() {
 			record := make(map[string]string)
 
@@ -179,7 +180,6 @@ func cmdExport() error {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
 			record["range"] = subnet.String()
-			enc := json.NewEncoder(outFile)
 			enc.Encode(record)
 		}
 		if err := networks.Err(); err != nil {

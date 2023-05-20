@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -455,15 +454,7 @@ func cmdImport() error {
 			entrycnt += 1
 		}
 	} else if delim == '-' {
-		// NOTE: this is not a streaming solution; the whole JSON input is
-		// loaded into memory at once. streaming is much harder and we can do
-		// it later if really needed for files that can't fit in RAM.
-		file, err := ioutil.ReadAll(inFile)
-		if err != nil {
-			return fmt.Errorf("failed to read from input: %w", err)
-		}
-
-		dataStream := json.NewDecoder(strings.NewReader(string(file)))
+		dataStream := json.NewDecoder(inFile)
 		for {
 			// Decode one JSON document.
 			var row interface{}
