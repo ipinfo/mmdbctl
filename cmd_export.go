@@ -170,13 +170,8 @@ func cmdExport() error {
 			return fmt.Errorf("failed networks traversal: %w", err)
 		}
 	} else if fFormat == "json" {
-		// always print opening brace, even if no items.
-		fmt.Fprintf(outFile, "{")
-
-		// the first iter of the loop is special (don't print a comma).
-		onFirst := true
-
 		networks := db.Networks(maxminddb.SkipAliasedNetworks)
+		enc := json.NewEncoder(outFile)
 		for networks.Next() {
 			record := make(map[string]string)
 
@@ -184,34 +179,11 @@ func cmdExport() error {
 			if err != nil {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
-
-			// marshal each record one-by-one and print it cleanly.
-			data, err := json.MarshalIndent(record, "    ", "    ")
-			if err != nil {
-				return fmt.Errorf("%w", err)
-			}
-			if onFirst {
-				onFirst = false
-				fmt.Fprintf(
-					outFile, "\n    \"%s\": %s",
-					subnet.String(), data,
-				)
-			} else {
-				fmt.Fprintf(
-					outFile, ",\n    \"%s\": %s",
-					subnet.String(), data,
-				)
-			}
+			record["range"] = subnet.String()
+			enc.Encode(record)
 		}
 		if err := networks.Err(); err != nil {
 			return fmt.Errorf("failed networks traversal: %w", err)
-		}
-
-		// if we had no items, close the top-level object without any newline.
-		if !onFirst {
-			fmt.Fprintf(outFile, "\n}")
-		} else {
-			fmt.Fprintf(outFile, "}")
 		}
 	}
 	return nil

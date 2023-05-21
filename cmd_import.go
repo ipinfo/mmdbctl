@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -455,35 +454,51 @@ func cmdImport() error {
 			entrycnt += 1
 		}
 	} else if delim == '-' {
-		// NOTE: this is not a streaming solution; the whole JSON input is
-		// loaded into memory at once. streaming is much harder and we can do
-		// it later if really needed for files that can't fit in RAM.
-		file, err := ioutil.ReadAll(inFile)
-		if err != nil {
-			return fmt.Errorf("failed to read from input: %w", err)
-		}
+		dataStream := json.NewDecoder(inFile)
+		for {
+			// Decode one JSON document.
+			var row interface{}
+			err := dataStream.Decode(&row)
 
-		firstSeen := false
-		var data map[string]map[string]string
-		json.Unmarshal([]byte(file), &data)
-		for networkStr, recordMap := range data {
-			// on first object?
-			if !firstSeen {
-				firstSeen = true
-
-				// insert empty values for all fields in 0.0.0.0/0 if requested.
-				if fIgnoreEmptyVals {
-					_, network, _ := net.ParseCIDR("0.0.0.0/0")
-					record := mmdbtype.Map{}
-					for k, _ := range recordMap {
-						record[mmdbtype.String(k)] = mmdbtype.String("")
-					}
-					if err := tree.Insert(network, record); err != nil {
-						return errors.New(
-							"couldn't insert empty values to 0.0.0.0/0",
-						)
-					}
+			if err != nil {
+				// io.EOF is expected at end of stream.
+				if err != io.EOF {
+					return fmt.Errorf("error in io.EOF: %w", err)
 				}
+				break
+			}
+			mResult := row.(map[string]interface{})
+
+			// insert empty values for all fields in 0.0.0.0/0 if requested.
+			if fIgnoreEmptyVals {
+				_, network, _ := net.ParseCIDR("0.0.0.0/0")
+				record := mmdbtype.Map{}
+				for _, field := range fFields {
+					record[mmdbtype.String(field)] = mmdbtype.String("")
+				}
+				if err := tree.Insert(network, record); err != nil {
+					return errors.New(
+						"couldn't insert empty values to 0.0.0.0/0",
+					)
+				}
+			}
+
+			// convert 2 IPs into IP range?
+			var networkStr string
+			if val, ok := mResult["start_ip"].(string); ok {
+				networkStr = val + "-" + mResult["end_ip"].(string)
+				delete(mResult, "start_ip")
+				delete(mResult, "end_ip")
+				if _, ok := mResult["join_key"].(string); ok {
+					delete(mResult, "join_key")
+				}
+			} else if val, ok := mResult["range"].(string); ok {
+				networkStr = val
+				delete(mResult, "range")
+			} else {
+				return errors.New(
+					"couldn't get ip or range from the record",
+				)
 			}
 
 			// add network part to single-IP network if it's missing.
@@ -501,8 +516,8 @@ func cmdImport() error {
 			if !fNoNetwork {
 				record["network"] = mmdbtype.String(networkStr)
 			}
-			for k, v := range recordMap {
-				record[mmdbtype.String(k)] = mmdbtype.String(v)
+			for k, v := range mResult {
+				record[mmdbtype.String(k)] = mmdbtype.String(v.(string))
 			}
 
 			// range insertion or cidr insertion?
@@ -513,7 +528,7 @@ func cmdImport() error {
 				if err := tree.InsertRange(startIp, endIp, record); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
-						recordMap,
+						mResult,
 					)
 				}
 			} else {
@@ -527,7 +542,7 @@ func cmdImport() error {
 				if err := tree.Insert(network, record); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
-						recordMap,
+						mResult,
 					)
 				}
 			}
