@@ -132,7 +132,7 @@ func cmdExport() error {
 			tsvwr := NewTsvWriter(outFile)
 			wr = tsvwr
 		}
-		record := make(map[string]string)
+		record := make(map[string]interface{})
 		networks := db.Networks(maxminddb.SkipAliasedNetworks)
 		for networks.Next() {
 			subnet, err := networks.Network(&record)
@@ -140,11 +140,12 @@ func cmdExport() error {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
 
+			recordStr := mapInterfaceToStr(record)
 			if !hdrWritten {
 				hdrWritten = true
 
 				if !fNoHdr {
-					hdr := append([]string{"range"}, sortedMapKeys(record)...)
+					hdr := append([]string{"range"}, sortedMapKeys(recordStr)...)
 					if err := wr.Write(hdr); err != nil {
 						return fmt.Errorf(
 							"failed to write header %v: %w",
@@ -156,7 +157,7 @@ func cmdExport() error {
 
 			line := append(
 				[]string{subnet.String()},
-				sortedMapValsByKeys(record)...,
+				sortedMapValsByKeys(recordStr)...,
 			)
 			if err := wr.Write(line); err != nil {
 				return fmt.Errorf("failed to write line %v: %w", line, err)
@@ -173,7 +174,7 @@ func cmdExport() error {
 		networks := db.Networks(maxminddb.SkipAliasedNetworks)
 		enc := json.NewEncoder(outFile)
 		for networks.Next() {
-			record := make(map[string]string)
+			record := make(map[string]interface{})
 
 			subnet, err := networks.Network(&record)
 			if err != nil {

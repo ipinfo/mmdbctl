@@ -112,7 +112,7 @@ func cmdRead() error {
 		wr = tsvwr
 	}
 	for _, ip := range ips {
-		record := make(map[string]string)
+		record := make(map[string]interface{})
 		if err := db.Lookup(ip, &record); err != nil || len(record) == 0 {
 			if !requiresHdr {
 				fmt.Fprintf(os.Stderr,
@@ -122,12 +122,13 @@ func cmdRead() error {
 			}
 			continue
 		}
+		recordStr := mapInterfaceToStr(record)
 
 		if !hdrWritten {
 			hdrWritten = true
 
 			if requiresHdr {
-				hdr := append([]string{"ip"}, sortedMapKeys(record)...)
+				hdr := append([]string{"ip"}, sortedMapKeys(recordStr)...)
 				if err := wr.Write(hdr); err != nil {
 					return fmt.Errorf(
 						"failed to write header %v: %w",
@@ -158,7 +159,7 @@ func cmdRead() error {
 			}
 			fmt.Printf("%s\n", b)
 		} else { // if fFormat == "csv" || fFormat == "tsv"
-			line := append([]string{ip.String()}, sortedMapValsByKeys(record)...)
+			line := append([]string{ip.String()}, sortedMapValsByKeys(recordStr)...)
 			if err := wr.Write(line); err != nil {
 				return fmt.Errorf("failed to write line %v: %w", line, err)
 			}
