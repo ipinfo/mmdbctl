@@ -54,13 +54,13 @@ func mapInterfaceToStr(m map[string]interface{}) map[string]string {
 		case string:
 			retVal[key] = v
 		case map[string]interface{}:
-			outJson, err := json.Marshal(value)
+			outJson, err := json.Marshal(v)
 			if err != nil {
 				return nil
 			}
 			retVal[key] = string(outJson)
 		case []interface{}:
-			outJson, err := json.Marshal(value)
+			outJson, err := json.Marshal(v)
 			if err != nil {
 				return nil
 			}
@@ -68,7 +68,6 @@ func mapInterfaceToStr(m map[string]interface{}) map[string]string {
 		default:
 			retVal[key] = fmt.Sprintf("%v", v)
 		}
-
 	}
 	return retVal
 }

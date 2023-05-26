@@ -181,6 +181,24 @@ func cmdExport() error {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
 			record["range"] = subnet.String()
+
+			// Unmarshal []interface{} and map[string]interface{} stored as string
+			recordStr := mapInterfaceToStr(record)
+			for key, value := range recordStr {
+				if strings.Contains(value, "[") && value[0] == '[' { //Check if the value is []interface{}
+					var arr1 []interface{}
+					_ = json.Unmarshal([]byte(value), &arr1)
+					if len(arr1) > 0 {
+						record[key] = arr1
+					}
+				} else if strings.Contains(value, "{") && value[0] == '{' { //Check if the value is map[string]interface{}
+					mapConv := make(map[string]interface{})
+					_ = json.Unmarshal([]byte(value), &mapConv)
+					if len(mapConv) > 0 {
+						record[key] = mapConv
+					}
+				}
+			}
 			enc.Encode(record)
 		}
 		if err := networks.Err(); err != nil {
