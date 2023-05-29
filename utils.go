@@ -73,19 +73,19 @@ func mapInterfaceToStr(m map[string]interface{}) map[string]string {
 	return retVal
 }
 
-// Unmarshal []interface{} and map[string]interface{} stored as string
+// Unmarshal []interface{} and map[string]interface{} stored as string.
 func unmarshStringJson(m map[string]interface{}) map[string]interface{} {
 	retVal := make(map[string]interface{})
 	for key, value := range m {
 		switch v := value.(type) {
 		case string:
-			if strings.Contains(v, "[") && v[0] == '[' { //Check if the value is []interface{}
+			if strings.Contains(v, "[") && v[0] == '[' { // Check if the value is []interface{}.
 				var interfaceArr []interface{}
 				_ = json.Unmarshal([]byte(v), &interfaceArr)
 				if len(interfaceArr) > 0 {
 					retVal[key] = interfaceArr
 				}
-			} else if strings.Contains(v, "{") && v[0] == '{' { //Check if the value is map[string]interface{}
+			} else if strings.Contains(v, "{") && v[0] == '{' { // Check if the value is map[string]interface{}.
 				mapConv := make(map[string]interface{})
 				_ = json.Unmarshal([]byte(v), &mapConv)
 				if len(mapConv) > 0 {
