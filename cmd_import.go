@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -323,17 +324,19 @@ func cmdImport() error {
 		defer inFile.Close()
 	}
 
+	inFileBuffered := bufio.NewReaderSize(inFile, 65536)
+
 	entrycnt := 0
 	if delim == ',' || delim == '\t' {
 		var rdr reader
 		if delim == ',' {
-			csvrdr := csv.NewReader(inFile)
+			csvrdr := csv.NewReader(inFileBuffered)
 			csvrdr.Comma = delim
 			csvrdr.LazyQuotes = true
 
 			rdr = csvrdr
 		} else {
-			tsvrdr := NewTsvReader(inFile)
+			tsvrdr := NewTsvReader(inFileBuffered)
 
 			rdr = tsvrdr
 		}
@@ -454,7 +457,7 @@ func cmdImport() error {
 			entrycnt += 1
 		}
 	} else if delim == '-' {
-		dataStream := json.NewDecoder(inFile)
+		dataStream := json.NewDecoder(inFileBuffered)
 		for {
 			// Decode one JSON document.
 			var row interface{}
