@@ -181,8 +181,7 @@ func cmdExport() error {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
 			record["range"] = subnet.String()
-			fmtRecord := unmarshStringJson(record)
-			enc.Encode(fmtRecord)
+			enc.Encode(record)
 		}
 		if err := networks.Err(); err != nil {
 			return fmt.Errorf("failed networks traversal: %w", err)
