@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"sort"
+	"strconv"
 )
 
 func sortedMapKeys(m map[string]string) []string {
@@ -38,4 +41,25 @@ func longestStrInStringSlice(s []string) string {
 		}
 	}
 	return *longest
+}
+
+func mapInterfaceToStr(m map[string]interface{}) map[string]string {
+	retVal := make(map[string]string)
+	for key, value := range m {
+		switch v := value.(type) {
+		case int:
+			retVal[key] = strconv.Itoa(v)
+		case float64:
+			retVal[key] = fmt.Sprintf("%f", v)
+		case string:
+			retVal[key] = v
+		default:
+			outJson, err := json.Marshal(v)
+			if err != nil {
+				return nil
+			}
+			retVal[key] = string(outJson)
+		}
+	}
+	return retVal
 }

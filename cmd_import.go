@@ -519,8 +519,10 @@ func cmdImport() error {
 			if !fNoNetwork {
 				record["network"] = mmdbtype.String(networkStr)
 			}
-			for k, v := range mResult {
-				record[mmdbtype.String(k)] = mmdbtype.String(v.(string))
+
+			mResultStr := mapInterfaceToStr(mResult)
+			for k, v := range mResultStr {
+				record[mmdbtype.String(k)] = mmdbtype.String(v)
 			}
 
 			// range insertion or cidr insertion?
