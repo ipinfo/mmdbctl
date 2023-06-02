@@ -158,10 +158,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 		f.Out = args[1]
 	}
 
-	if f.Out == "" {
-		return errors.New("output file missing")
-	}
-
 	// validate IP version.
 	if f.Ip != 4 && f.Ip != 6 {
 		return errors.New("ip version must be \"4\" or \"6\"")

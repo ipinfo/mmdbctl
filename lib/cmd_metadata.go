@@ -30,9 +30,9 @@ func (f *CmdMetadataFlags) Init() {
 		"help", "h", false,
 		"show help.",
 	)
-	pflag.BoolVarP(
+	pflag.BoolVar(
 		&f.NoColor,
-		"NoHdr", "u", false,
+		"nocolor", false,
 		_h,
 	)
 	pflag.StringVarP(

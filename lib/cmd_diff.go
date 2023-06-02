@@ -31,12 +31,12 @@ func (f *CmdDiffFlags) Init() {
 	)
 	pflag.BoolVarP(
 		&f.Subnets,
-		"NoHdr", "u", false,
+		"subnets", "s", false,
 		_h,
 	)
 	pflag.BoolVarP(
 		&f.Records,
-		"format", "f", false,
+		"records", "r", false,
 		_h,
 	)
 }

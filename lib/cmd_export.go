@@ -31,9 +31,9 @@ func (f *CmdExportFlags) Init() {
 		"help", "h", false,
 		"show help.",
 	)
-	pflag.BoolVarP(
+	pflag.BoolVar(
 		&f.NoHdr,
-		"NoHdr", "u", false,
+		"no-header", false,
 		_h,
 	)
 	pflag.StringVarP(
