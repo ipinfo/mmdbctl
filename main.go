@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/spf13/pflag"
 )
 
 var progBase = filepath.Base(os.Args[0])
@@ -29,9 +28,6 @@ func main() {
 	if len(os.Args) > 1 {
 		cmd = os.Args[1]
 	}
-
-	pflag.BoolVarP(&fHelp, "help", "h", false, "show help.")
-	pflag.BoolVar(&fNoColor, "nocolor", false, "disable colored output.")
 
 	switch {
 	case cmd == "read":

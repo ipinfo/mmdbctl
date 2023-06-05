@@ -1,12 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/ipinfo/cli/lib/complete"
 	"github.com/ipinfo/cli/lib/complete/predict"
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/ipinfo/mmdbctl/lib"
 	"github.com/spf13/pflag"
 )
 
@@ -29,36 +28,9 @@ Options:
 }
 
 func cmdVerify() error {
+	f := lib.CmdVerifyFlags{}
+	f.Init()
 	pflag.Parse()
 
-	// help?
-	if fHelp || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
-		printHelpVerify()
-		return nil
-	}
-
-	// get args excluding subcommand.
-	args := pflag.Args()[1:]
-
-	// validate input file.
-	if len(args) == 0 {
-		return errors.New("input mmdb file required as first argument")
-	}
-
-	// open tree.
-	db, err := maxminddb.Open(args[0])
-	if err != nil {
-		return fmt.Errorf("couldn't open mmdb file: %w", err)
-	}
-	defer db.Close()
-
-	// verify.
-	err = db.Verify()
-	if err != nil {
-		fmt.Printf("invalid: %v\n", err)
-	} else {
-		fmt.Println("valid")
-	}
-
-	return nil
+	return lib.CmdVerify(f, pflag.Args()[1:], printHelpVerify)
 }

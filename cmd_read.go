@@ -1,16 +1,11 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/fatih/color"
-	"github.com/ipinfo/cli/lib"
 	"github.com/ipinfo/cli/lib/complete"
 	"github.com/ipinfo/cli/lib/complete/predict"
-	"github.com/oschwald/maxminddb-golang"
+	mmdbLib "github.com/ipinfo/mmdbctl/lib"
 	"github.com/spf13/pflag"
 )
 
@@ -53,124 +48,9 @@ Options:
 }
 
 func cmdRead() error {
-	var fFormat string
-
-	_h := "see description in --help"
-	pflag.StringVarP(&fFormat, "format", "f", "json", _h)
+	f := mmdbLib.CmdReadFlags{}
+	f.Init()
 	pflag.Parse()
 
-	if fNoColor {
-		color.NoColor = true
-	}
-
-	// help?
-	if fHelp || pflag.NArg() == 1 {
-		printHelpRead()
-		return nil
-	}
-
-	// get args excluding subcommand.
-	args := pflag.Args()[1:]
-
-	// validate format.
-	if fFormat == "json" {
-		fFormat = "json-compact"
-	}
-	validFormat := false
-	for _, format := range predictReadFmts {
-		if fFormat == format {
-			validFormat = true
-			break
-		}
-	}
-	if !validFormat {
-		return fmt.Errorf("format must be one of %v", predictReadFmts)
-	}
-
-	// last arg must be mmdb file; open it.
-	mmdbFileArg := args[len(args)-1]
-	db, err := maxminddb.Open(mmdbFileArg)
-	if err != nil {
-		return fmt.Errorf("couldn't open mmdb file %v: %w", mmdbFileArg, err)
-	}
-	defer db.Close()
-
-	// get IP list.
-	ips, err := lib.IPListFromAllSrcs(args[:len(args)-1])
-	if err != nil {
-		return fmt.Errorf("couldn't get IP list: %w", err)
-	}
-
-	requiresHdr := fFormat == "csv" || fFormat == "tsv"
-	hdrWritten := false
-	var wr writer
-	if fFormat == "csv" {
-		csvwr := csv.NewWriter(os.Stdout)
-		wr = csvwr
-	} else if fFormat == "tsv" {
-		tsvwr := NewTsvWriter(os.Stdout)
-		wr = tsvwr
-	}
-	for _, ip := range ips {
-		record := make(map[string]interface{})
-		if err := db.Lookup(ip, &record); err != nil || len(record) == 0 {
-			if !requiresHdr {
-				fmt.Fprintf(os.Stderr,
-					"err: couldn't get data for %s\n",
-					ip.String(),
-				)
-			}
-			continue
-		}
-		recordStr := mapInterfaceToStr(record)
-
-		if !hdrWritten {
-			hdrWritten = true
-
-			if requiresHdr {
-				hdr := append([]string{"ip"}, sortedMapKeys(recordStr)...)
-				if err := wr.Write(hdr); err != nil {
-					return fmt.Errorf(
-						"failed to write header %v: %w",
-						hdr, err,
-					)
-				}
-			}
-		}
-
-		if fFormat == "json-compact" {
-			b, err := json.Marshal(record)
-			if err != nil {
-				fmt.Fprintf(os.Stderr,
-					"err: couldn't print data for %s\n",
-					ip.String(),
-				)
-				continue
-			}
-			fmt.Printf("%s\n", b)
-		} else if fFormat == "json-pretty" {
-			b, err := json.MarshalIndent(record, "", "  ")
-			if err != nil {
-				fmt.Fprintf(os.Stderr,
-					"err: couldn't print data for %s\n",
-					ip.String(),
-				)
-				continue
-			}
-			fmt.Printf("%s\n", b)
-		} else { // if fFormat == "csv" || fFormat == "tsv"
-			line := append([]string{ip.String()}, sortedMapValsByKeys(recordStr)...)
-			if err := wr.Write(line); err != nil {
-				return fmt.Errorf("failed to write line %v: %w", line, err)
-			}
-		}
-	}
-	if wr != nil {
-		wr.Flush()
-		if err := wr.Error(); err != nil {
-			return fmt.Errorf("writer had failure: %w", err)
-		}
-	}
-
-	return nil
+	return mmdbLib.CmdRead(f, pflag.Args()[1:], printHelpRead)
 }

@@ -30,6 +30,8 @@ Options:
 }
 
 func cmdDefault() (err error) {
+	pflag.BoolVarP(&fHelp, "help", "h", false, "show help.")
+	pflag.BoolVar(&fNoColor, "nocolor", false, "disable colored output.")
 	pflag.Parse()
 
 	if fNoColor {
