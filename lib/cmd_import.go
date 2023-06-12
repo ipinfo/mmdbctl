@@ -353,57 +353,9 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				}
 			}
 
-			networkStr := parts[0]
-
-			// convert 2 IPs into IP range?
-			if f.RangeMultiCol {
-				networkStr = parts[0] + "-" + parts[1]
-			}
-
-			// add network part to single-IP network if it's missing.
-			isNetworkRange := strings.Contains(networkStr, "-")
-			if !isNetworkRange && !strings.Contains(networkStr, "/") {
-				if f.Ip == 6 && strings.Contains(networkStr, ":") {
-					networkStr += "/128"
-				} else {
-					networkStr += "/32"
-				}
-			}
-
-			// prep record.
-			record := mmdbtype.Map{}
-			if !f.NoNetwork {
-				record["network"] = mmdbtype.String(networkStr)
-			}
-			for i, field := range f.Fields {
-				record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
-			}
-
-			// range insertion or cidr insertion?
-			if isNetworkRange {
-				networkStrParts := strings.Split(networkStr, "-")
-				startIp := net.ParseIP(networkStrParts[0])
-				endIp := net.ParseIP(networkStrParts[1])
-				if err := tree.InsertRange(startIp, endIp, record); err != nil {
-					fmt.Fprintf(
-						os.Stderr, "warn: couldn't insert line '%v'\n",
-						strings.Join(parts, string(delim)),
-					)
-				}
-			} else {
-				_, network, err := net.ParseCIDR(networkStr)
-				if err != nil {
-					return fmt.Errorf(
-						"couldn't parse cidr \"%v\": %w",
-						networkStr, err,
-					)
-				}
-				if err := tree.Insert(network, record); err != nil {
-					fmt.Fprintf(
-						os.Stderr, "warn: couldn't insert line '%v'\n",
-						strings.Join(parts, string(delim)),
-					)
-				}
+			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
+			if err != nil {
+				return err
 			}
 
 			entrycnt += 1
@@ -516,6 +468,63 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	fmt.Fprintf(os.Stderr, "writing to %s (%v entries)\n", f.Out, entrycnt)
 	if _, err := tree.WriteTo(outFile); err != nil {
 		return fmt.Errorf("writing out to tree failed: %w", err)
+	}
+
+	return nil
+}
+
+func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
+	networkStr := parts[0]
+
+	// convert 2 IPs into IP range?
+	if f.RangeMultiCol {
+		networkStr = parts[0] + "-" + parts[1]
+	}
+
+	// add network part to single-IP network if it's missing.
+	isNetworkRange := strings.Contains(networkStr, "-")
+	if !isNetworkRange && !strings.Contains(networkStr, "/") {
+		if f.Ip == 6 && strings.Contains(networkStr, ":") {
+			networkStr += "/128"
+		} else {
+			networkStr += "/32"
+		}
+	}
+
+	// prep record.
+	record := mmdbtype.Map{}
+	if !f.NoNetwork {
+		record["network"] = mmdbtype.String(networkStr)
+	}
+	for i, field := range f.Fields {
+		record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
+	}
+
+	// range insertion or cidr insertion?
+	if isNetworkRange {
+		networkStrParts := strings.Split(networkStr, "-")
+		startIp := net.ParseIP(networkStrParts[0])
+		endIp := net.ParseIP(networkStrParts[1])
+		if err := tree.InsertRange(startIp, endIp, record); err != nil {
+			fmt.Fprintf(
+				os.Stderr, "warn: couldn't insert line '%v'\n",
+				strings.Join(parts, string(delim)),
+			)
+		}
+	} else {
+		_, network, err := net.ParseCIDR(networkStr)
+		if err != nil {
+			return fmt.Errorf(
+				"couldn't parse cidr \"%v\": %w",
+				networkStr, err,
+			)
+		}
+		if err := tree.Insert(network, record); err != nil {
+			fmt.Fprintf(
+				os.Stderr, "warn: couldn't insert line '%v'\n",
+				strings.Join(parts, string(delim)),
+			)
+		}
 	}
 
 	return nil
