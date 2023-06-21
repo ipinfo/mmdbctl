@@ -41,6 +41,28 @@ type CmdImportFlags struct {
 	DisableMetadataPtrs bool
 }
 
+var CmdImportFlagsDefaults = CmdImportFlags{
+	Help:                false,
+	In:                  "",
+	Out:                 "",
+	Csv:                 false,
+	Tsv:                 false,
+	Json:                false,
+	Fields:              nil,
+	FieldsFromHdr:       false,
+	RangeMultiCol:       false,
+	JoinKeyCol:          false,
+	NoFields:            false,
+	NoNetwork:           false,
+	Ip:                  6,
+	Size:                32,
+	Merge:               "none",
+	IgnoreEmptyVals:     false,
+	DisallowReserved:    false,
+	Alias6to4:           false,
+	DisableMetadataPtrs: true,
+}
+
 // Init initializes the common flags available to CmdImport with sensible
 // defaults.
 //
@@ -49,97 +71,97 @@ func (f *CmdImportFlags) Init() {
 	_h := "see description in --help"
 	pflag.BoolVarP(
 		&f.Help,
-		"help", "h", false,
+		"help", "h", CmdImportFlagsDefaults.Help,
 		"show help.",
 	)
 	pflag.StringVarP(
 		&f.In,
-		"in", "i", "",
+		"in", "i", CmdImportFlagsDefaults.In,
 		_h,
 	)
 	pflag.StringVarP(
 		&f.Out,
-		"out", "o", "",
+		"out", "o", CmdImportFlagsDefaults.Out,
 		_h,
 	)
 	pflag.BoolVarP(
 		&f.Csv,
-		"csv", "c", false,
+		"csv", "c", CmdImportFlagsDefaults.Csv,
 		_h,
 	)
 	pflag.BoolVarP(
 		&f.Tsv,
-		"tsv", "t", false,
+		"tsv", "t", CmdImportFlagsDefaults.Tsv,
 		_h,
 	)
 	pflag.BoolVarP(
 		&f.Json,
-		"json", "j", false,
+		"json", "j", CmdImportFlagsDefaults.Json,
 		_h,
 	)
 	pflag.StringSliceVarP(
 		&f.Fields,
-		"fields", "f", nil,
+		"fields", "f", CmdImportFlagsDefaults.Fields,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.FieldsFromHdr,
-		"fields-from-header", false,
+		"fields-from-header", CmdImportFlagsDefaults.FieldsFromHdr,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.RangeMultiCol,
-		"range-multicol", false,
+		"range-multicol", CmdImportFlagsDefaults.RangeMultiCol,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.JoinKeyCol,
-		"joinkey-col", false,
+		"joinkey-col", CmdImportFlagsDefaults.JoinKeyCol,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.NoFields,
-		"no-fields", false,
+		"no-fields", CmdImportFlagsDefaults.NoFields,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.NoNetwork,
-		"no-network", false,
+		"no-network", CmdImportFlagsDefaults.NoNetwork,
 		_h,
 	)
 	pflag.IntVar(
 		&f.Ip,
-		"ip", 6,
+		"ip", CmdImportFlagsDefaults.Ip,
 		_h,
 	)
 	pflag.IntVarP(
 		&f.Size,
-		"size", "s", 32,
+		"size", "s", CmdImportFlagsDefaults.Size,
 		_h,
 	)
 	pflag.StringVarP(
 		&f.Merge,
-		"merge", "m", "none",
+		"merge", "m", CmdImportFlagsDefaults.Merge,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.IgnoreEmptyVals,
-		"ignore-empty-values", false,
+		"ignore-empty-values", CmdImportFlagsDefaults.IgnoreEmptyVals,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.DisallowReserved,
-		"disallow-reserved", false,
+		"disallow-reserved", CmdImportFlagsDefaults.DisallowReserved,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.Alias6to4,
-		"alias-6to4", false,
+		"alias-6to4", CmdImportFlagsDefaults.Alias6to4,
 		_h,
 	)
 	pflag.BoolVar(
 		&f.DisableMetadataPtrs,
-		"disable-metadata-pointers", true,
+		"disable-metadata-pointers", CmdImportFlagsDefaults.DisableMetadataPtrs,
 		_h,
 	)
 
