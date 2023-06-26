@@ -404,14 +404,9 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			}
 
 			// prep record.
-			record := mmdbtype.Map{}
-			if !f.NoNetwork {
-				record["network"] = mmdbtype.String(networkStr)
-			}
-
-			mResultStr := mapInterfaceToStr(mResult)
-			for k, v := range mResultStr {
-				record[mmdbtype.String(k)] = mmdbtype.String(v)
+			data, err := ProcessJsonData(tree, mResult, f, networkStr)
+			if err != nil {
+				return fmt.Errorf("failed to map to mmdb.type err: %w", err)
 			}
 
 			// range insertion or cidr insertion?
@@ -419,7 +414,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				networkStrParts := strings.Split(networkStr, "-")
 				startIp := net.ParseIP(networkStrParts[0])
 				endIp := net.ParseIP(networkStrParts[1])
-				if err := tree.InsertRange(startIp, endIp, record); err != nil {
+				if err := tree.InsertRange(startIp, endIp, data); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
 						mResult,
@@ -433,7 +428,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 						networkStr, err,
 					)
 				}
-				if err := tree.Insert(network, record); err != nil {
+				if err := tree.Insert(network, data); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
 						mResult,
@@ -557,4 +552,54 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	}
 
 	return nil
+}
+
+func ProcessJsonData(tree *mmdbwriter.Tree, data map[string]interface{}, f CmdImportFlags, networkStr string) (mmdbtype.DataType, error) {
+	subMap := mmdbtype.Map{}
+	if !f.NoNetwork {
+		subMap["network"] = mmdbtype.String(networkStr)
+	}
+	// Insert each key-value pair into the map
+	for key, value := range data {
+		mmdbValue, err := ConvertToMMDBType(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert value to MMDB type: %v", err)
+		}
+		subMap[mmdbtype.String(key)] = mmdbValue
+	}
+
+	return subMap, nil
+}
+
+func ConvertToMMDBType(value interface{}) (mmdbtype.DataType, error) {
+	switch v := value.(type) {
+	case string:
+		return mmdbtype.String(v), nil
+	case float64:
+		return mmdbtype.Float64(v), nil
+	case bool:
+		return mmdbtype.Bool(v), nil
+	case map[string]interface{}:
+		subMap := mmdbtype.Map{}
+		for key, val := range v {
+			mmdbValue, err := ConvertToMMDBType(val)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert value to MMDB type: %v", err)
+			}
+			subMap[mmdbtype.String(key)] = mmdbValue
+		}
+		return subMap, nil
+	case []interface{}:
+		subSlice := mmdbtype.Slice{}
+		for _, val := range v {
+			mmdbValue, err := ConvertToMMDBType(val)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert value to MMDB type: %v", err)
+			}
+			subSlice = append(subSlice, mmdbValue)
+		}
+		return subSlice, nil
+	default:
+		return nil, fmt.Errorf("unsupported data type: %T", v)
+	}
 }
