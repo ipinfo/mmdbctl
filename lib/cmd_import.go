@@ -11,12 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/inserter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
 	"github.com/spf13/pflag"
 )
+
+var csvRecord = mmdbtype.Map{}
+
+var stringPool = sync.Pool{
+	New: func() interface{} {
+		return new(mmdbtype.String)
+	},
+}
 
 // CmdImportFlags are flags expected by CmdImport.
 type CmdImportFlags struct {
@@ -520,12 +529,20 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	}
 
 	// prep record.
-	record := mmdbtype.Map{}
+
 	if !f.NoNetwork {
-		record["network"] = mmdbtype.String(networkStr)
+		csvRecord["network"] = mmdbtype.String(networkStr)
 	}
 	for i, field := range f.Fields {
-		record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
+		k := stringPool.Get().(*mmdbtype.String)
+		*k = mmdbtype.String(field)
+		stringPool.Put(k)
+
+		v := stringPool.Get().(*mmdbtype.String)
+		*v = mmdbtype.String(parts[i+dataColStart])
+
+		csvRecord[*k] = *v
+		//record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
 	}
 
 	// range insertion or cidr insertion?
@@ -533,7 +550,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 		networkStrParts := strings.Split(networkStr, "-")
 		startIp := net.ParseIP(networkStrParts[0])
 		endIp := net.ParseIP(networkStrParts[1])
-		if err := tree.InsertRange(startIp, endIp, record); err != nil {
+		if err := tree.InsertRange(startIp, endIp, csvRecord); err != nil {
 			fmt.Fprintf(
 				os.Stderr, "warn: couldn't insert line '%v'\n",
 				strings.Join(parts, string(delim)),
@@ -547,7 +564,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 				networkStr, err,
 			)
 		}
-		if err := tree.Insert(network, record); err != nil {
+		if err := tree.Insert(network, csvRecord); err != nil {
 			fmt.Fprintf(
 				os.Stderr, "warn: couldn't insert line '%v'\n",
 				strings.Join(parts, string(delim)),
