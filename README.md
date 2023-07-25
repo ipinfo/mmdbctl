@@ -1,6 +1,6 @@
 # [<img src="https://ipinfo.io/static/ipinfo-small.svg" alt="IPinfo" width="24"/>](https://ipinfo.io/) IPinfo `mmdbctl`
 
-`mmdbctl` is an MMDB file management CLI  by [IPinfo.io](https://ipinfo.io) that provides you
+`mmdbctl` is an MMDB file management CLI by [IPinfo.io](https://ipinfo.io) that provides you
 the following features:
 
 - Read data for IPs in an MMDB file.
@@ -19,28 +19,28 @@ The `mmdbctl` CLI is available for download via multiple mechanisms.
 Install the latest `amd64` version:
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/macos.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/macos.sh | sh
 ```
 
 ### Debian / Ubuntu (amd64)
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/deb.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/deb.sh | sh
 ```
 
 OR
 
 ```bash
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/mmdbctl_1.3.0.deb
-sudo dpkg -i mmdbctl_1.3.0.deb
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/mmdbctl_1.4.0.deb
+sudo dpkg -i mmdbctl_1.4.0.deb
 ```
 
 ### Windows Powershell
 
-*Note*: run powershell as administrator before executing this command.
+_Note_: run powershell as administrator before executing this command.
 
 ```bash
-iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/windows.ps1 | iex
+iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/windows.ps1 | iex
 ```
 
 ### Using `go install`
@@ -91,11 +91,11 @@ After choosing a platform `PLAT` from above, run:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/mmdbctl_1.3.0_${PLAT}.tar.gz
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/mmdbctl_1.4.0_${PLAT}.tar.gz
 # OR
-wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.3.0/mmdbctl_1.3.0_${PLAT}.tar.gz
-tar -xvf mmdbctl_1.3.0_${PLAT}.tar.gz
-mv mmdbctl_1.3.0_${PLAT} /usr/local/bin/mmdbctl
+wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.0/mmdbctl_1.4.0_${PLAT}.tar.gz
+tar -xvf mmdbctl_1.4.0_${PLAT}.tar.gz
+mv mmdbctl_1.4.0_${PLAT} /usr/local/bin/mmdbctl
 ```
 
 ### Using `git`
@@ -370,7 +370,7 @@ shell do that with the `mmdbctl` binary itself (or any of our binaries).
 ### Disabling Color Output
 
 All our CLIs respect either the `--nocolor` flag or the
-[`NO_COLOR`](https://no-color.org/)  environment variable to disable color
+[`NO_COLOR`](https://no-color.org/) environment variable to disable color
 output.
 
 ### Color on Windows
