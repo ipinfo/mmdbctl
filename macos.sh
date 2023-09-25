@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VSN=1.4.2
+VSN=1.4.3
 PLAT=darwin_amd64
 
 curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-${VSN}/mmdbctl_${VSN}_${PLAT}.tar.gz
