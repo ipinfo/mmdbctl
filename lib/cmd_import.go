@@ -601,7 +601,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	if f.RangeMultiCol {
 		networkStr = parts[0] + "-" + parts[1]
 	}
-	fmt.Println(networkStr)
+
 
 	// fmt.Println(networkStr);
 
