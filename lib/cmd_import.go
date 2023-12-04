@@ -522,7 +522,7 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 
 var ErrInvalidInput = errors.New("invalid input")
 func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
-	// Create a new big.Int with a value of 'decimal'
+	
 	num := new(big.Int)
 	num, success := num.SetString(decimal, 10)
 
