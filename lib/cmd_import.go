@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bufio"
+	"math/big"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -205,6 +206,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	// figure out file type.
 	var delim rune
 	if !f.Csv && !f.Tsv && !f.Json {
+		//fmt.Println("No file here")
 		if strings.HasSuffix(f.In, ".csv") {
 			delim = ','
 		} else if strings.HasSuffix(f.In, ".tsv") {
@@ -218,6 +220,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 		if f.Csv && f.Tsv || f.Csv && f.Json || f.Tsv && f.Json {
 			return errors.New("multiple input file types specified")
 		} else if f.Csv {
+			//fmt.Println("I told you CSV here");
 			delim = ','
 		} else if f.Tsv {
 			delim = '\t'
@@ -292,7 +295,12 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	} else {
 		var err error
 		inFile, err = os.Open(f.In)
+		//fmt.Println("Muneeb waqas")
+		
 		if err != nil {
+			//fmt.Println(f.In)
+			//fmt.Fprintln(os.Stderr, "This will go to os.Stderr")
+			//fmt.Println("This will go to os.Stdout")
 			return fmt.Errorf("invalid input file %v: %w", f.In, err)
 		}
 		defer inFile.Close()
@@ -304,6 +312,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	if delim == ',' || delim == '\t' {
 		var rdr reader
 		if delim == ',' {
+			//fmt.Println(inFileBuffered)
 			csvrdr := csv.NewReader(inFileBuffered)
 			csvrdr.Comma = delim
 			csvrdr.LazyQuotes = true
@@ -345,8 +354,10 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				}
 			}
 
+			fmt.Println(parts);
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
+				//fmt.Println(err);
 				return err
 			}
 
@@ -416,8 +427,12 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			// range insertion or cidr insertion?
 			if isNetworkRange {
 				networkStrParts := strings.Split(networkStr, "-")
+				//fmt.Print(networkStrParts)
 				startIp := net.ParseIP(networkStrParts[0])
+				//fmt.Println("Start IP here");
+				//fmt.Print(startIp)
 				endIp := net.ParseIP(networkStrParts[1])
+				//fmt.Print(endIp)
 				if err := tree.InsertRange(startIp, endIp, subMap); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
@@ -427,8 +442,10 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			} else {
 				_, network, err := net.ParseCIDR(networkStr)
 				if err != nil {
+
 					return fmt.Errorf(
-						"couldn't parse cidr \"%v\": %w",
+
+						"couldn't parse \"%v\": %w",
 						networkStr, err,
 					)
 				}
@@ -459,8 +476,11 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 
 func Preprocess(f CmdImportFlags, tree *mmdbwriter.Tree) error {
 	// insert empty values for all fields in 0.0.0.0/0 if requested.
+	//fmt.Println("Muneeb")
 	if f.IgnoreEmptyVals {
+		//fmt.Println("Muneeb")
 		_, network, _ := net.ParseCIDR("0.0.0.0/0")
+		//fmt.Println(network)
 		record := mmdbtype.Map{}
 		for _, field := range f.Fields {
 			record[mmdbtype.String(field)] = mmdbtype.String("")
@@ -475,8 +495,16 @@ func Preprocess(f CmdImportFlags, tree *mmdbwriter.Tree) error {
 	return nil
 }
 
+func intToIP(ipInt *big.Int) net.IP {
+	ip := make(net.IP, net.IPv6len)
+	ipIntBytes := ipInt.Bytes()
+	copy(ip[net.IPv6len-len(ipIntBytes):], ipIntBytes)
+	return ip
+}
+
 func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	// check if the header has a multi-column range.
+	//fmt.Println("Muneeb")
 	if len(parts) > 1 && parts[0] == "start_ip" && parts[1] == "end_ip" {
 		f.RangeMultiCol = true
 
@@ -501,16 +529,87 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	}
 }
 
+var ErrInvalidInput = errors.New("invalid input")
+func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
+	// Create a new big.Int with a value of 'decimal'
+	num := new(big.Int)
+	num, success := num.SetString(decimal, 10)
+
+	if !success {
+		fmt.Print(decimal)
+		return nil, ErrInvalidInput
+	}
+	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
+	if !forceIPv6 && num.Cmp(big.NewInt(4294967295)) <= 0 {
+		ip := make(net.IP, 4)
+		b := num.Bytes()
+		copy(ip[4-len(b):], b)
+		return ip, nil
+	}
+	// Convert to IPv6 if 'num' is within the IPv6 range
+	maxIpv6 := new(big.Int)
+	maxIpv6.SetString("340282366920938463463374607431768211455", 10)
+	if num.Cmp(maxIpv6) <= 0 {
+		ip := make(net.IP, 16)
+		b := num.Bytes()
+		copy(ip[16-len(b):], b)
+		return ip, nil
+	}
+	return nil, ErrInvalidInput
+}
+
+
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
+	//fmt.Println("Muneeb")
+
+
+
+	var check bool;
+	
+
+	
+	ip, err := DecimalStrToIP(parts[0], check)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	// fmt.Println("IP:", ip)
+	parts[0] = ip.String()
+
+	fmt.Println(parts[0])
+
+	ip1, err := DecimalStrToIP(parts[1], check)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	// fmt.Println("IP:", ip)
+	parts[1] = ip1.String()
+
+	fmt.Println(parts[1])
+
+
+
 	networkStr := parts[0]
 
+	fmt.Println(parts[0])
+	
+	fmt.Println(parts[1])
 	// convert 2 IPs into IP range?
 	if f.RangeMultiCol {
 		networkStr = parts[0] + "-" + parts[1]
 	}
+	fmt.Println(networkStr)
+
+	// fmt.Println(networkStr);
+
 
 	// add network part to single-IP network if it's missing.
 	isNetworkRange := strings.Contains(networkStr, "-")
+
+
 	if !isNetworkRange && !strings.Contains(networkStr, "/") {
 		if f.Ip == 6 && strings.Contains(networkStr, ":") {
 			networkStr += "/128"
@@ -518,6 +617,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			networkStr += "/32"
 		}
 	}
+
 
 	// prep record.
 	record := mmdbtype.Map{}
@@ -528,9 +628,14 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 		record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
 	}
 
+
+
+
 	// range insertion or cidr insertion?
 	if isNetworkRange {
 		networkStrParts := strings.Split(networkStr, "-")
+		//fmt.Println("Muneeb")
+		//fmt.Println(networkStrParts)
 		startIp := net.ParseIP(networkStrParts[0])
 		endIp := net.ParseIP(networkStrParts[1])
 		if err := tree.InsertRange(startIp, endIp, record); err != nil {
@@ -542,8 +647,11 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	} else {
 		_, network, err := net.ParseCIDR(networkStr)
 		if err != nil {
+
 			return fmt.Errorf(
-				"couldn't parse cidr \"%v\": %w",
+				//"couldn't parse cidr \"%v\": %w",
+				//This line is giving error
+				"couldn't parse  \"%v\": %w",
 				networkStr, err,
 			)
 		}

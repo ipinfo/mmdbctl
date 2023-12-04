@@ -47,6 +47,7 @@ type cmdDiffRecord struct {
 }
 
 func doDiff(
+	
 	newDb *maxminddb.Reader,
 	newDbStr string,
 	oldDb *maxminddb.Reader,
@@ -101,6 +102,7 @@ func doDiff(
 }
 
 func CmdDiff(f CmdDiffFlags, args []string, printHelp func()) error {
+	//fmt.Println("Muneeb")
 	if f.Help || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
 		printHelp()
 		return nil
