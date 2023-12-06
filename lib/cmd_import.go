@@ -501,14 +501,13 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	}
 }
 
-var ErrInvalidInput = errors.New("invalid")
-
 func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 	num := new(big.Int)
 	num, success := num.SetString(decimal, 10)
 
 	if !success {
-		return nil, ErrInvalidInput
+		return nil, errors.New("invalid input: unable to parse decimal string")
+
 	}
 
 	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
@@ -528,7 +527,8 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		copy(ip[16-len(b):], b)
 		return ip, nil
 	}
-	return nil, ErrInvalidInput
+	return nil, errors.New("invalid input: unable to parse decimal string")
+
 }
 
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
