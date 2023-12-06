@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -591,7 +590,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			)
 		}
 	}
-	
+
 	return nil
 }
 
