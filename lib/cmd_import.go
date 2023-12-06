@@ -2,12 +2,12 @@ package lib
 
 import (
 	"bufio"
-	"math/big"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -345,7 +345,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					continue
 				}
 			}
-			
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
 				return err
@@ -429,7 +428,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				_, network, err := net.ParseCIDR(networkStr)
 				if err != nil {
 					return fmt.Errorf(
-						"couldn't parse \"%v\": %w",
+						"couldn't parse cidr \"%v\": %w",
 						networkStr, err,
 					)
 				}
@@ -503,12 +502,12 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 }
 
 var ErrInvalidInput = errors.New("invalid")
+
 func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 	num := new(big.Int)
 	num, success := num.SetString(decimal, 10)
 
 	if !success {
-		fmt.Print(decimal)
 		return nil, ErrInvalidInput
 	}
 
@@ -532,18 +531,15 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 	return nil, ErrInvalidInput
 }
 
-
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
-	var check bool;
+	var check bool
 	ip, err := DecimalStrToIP(parts[0], check)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return err
 	}
 	parts[0] = ip.String()
 	ip1, err := DecimalStrToIP(parts[1], check)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return err
 	}
 	parts[1] = ip1.String()
@@ -572,7 +568,6 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	// range insertion or cidr insertion?
 	if isNetworkRange {
 		networkStrParts := strings.Split(networkStr, "-")
-		
 		startIp := net.ParseIP(networkStrParts[0])
 		endIp := net.ParseIP(networkStrParts[1])
 		if err := tree.InsertRange(startIp, endIp, record); err != nil {
@@ -585,7 +580,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 		_, network, err := net.ParseCIDR(networkStr)
 		if err != nil {
 			return fmt.Errorf(
-				"couldn't parse  \"%v\": %w",
+				"couldn't parse cidr \"%v\": %w",
 				networkStr, err,
 			)
 		}
