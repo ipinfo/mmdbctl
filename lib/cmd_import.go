@@ -593,6 +593,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	}
 	return nil
 }
+
 func ProcessJsonData(
 	data map[string]interface{},
 	subMap *mmdbtype.Map,
