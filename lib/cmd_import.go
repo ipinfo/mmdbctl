@@ -526,7 +526,7 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		copy(ip[16-len(b):], b)
 		return ip, nil
 	}
-	return nil, errors.New("invalid input: unable to parse decimal string")
+	return nil, errors.New("invalid input: invalid input: decimal value out of range for both IPv4 and IPv6")
 
 }
 
