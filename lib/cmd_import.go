@@ -516,7 +516,6 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		copy(ip[4-len(b):], b)
 		return ip, nil
 	}
-
 	// Convert to IPv6 if 'num' is within the IPv6 range
 	maxIpv6 := new(big.Int)
 	maxIpv6.SetString("340282366920938463463374607431768211455", 10)
@@ -527,7 +526,6 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		return ip, nil
 	}
 	return nil, errors.New("invalid input: invalid input: decimal value out of range for both IPv4 and IPv6")
-
 }
 
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
