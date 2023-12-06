@@ -501,7 +501,7 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	}
 }
 
-func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
+func DecimalStrToIP(decimal string) (net.IP, error) {
 	num := new(big.Int)
 	num, success := num.SetString(decimal, 10)
 
@@ -510,7 +510,7 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 	}
 
 	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
-	if !forceIPv6 && num.Cmp(big.NewInt(4294967295)) <= 0 {
+	if num.Cmp(big.NewInt(4294967295)) <= 0 {
 		ip := make(net.IP, 4)
 		b := num.Bytes()
 		copy(ip[4-len(b):], b)
@@ -529,13 +529,12 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 }
 
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
-	var check bool
-	ip, err := DecimalStrToIP(parts[0], check)
+	ip, err := DecimalStrToIP(parts[0])
 	if err != nil {
 		return err
 	}
 	parts[0] = ip.String()
-	ip1, err := DecimalStrToIP(parts[1], check)
+	ip1, err := DecimalStrToIP(parts[1])
 	if err != nil {
 		return err
 	}
