@@ -541,10 +541,12 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	}
 	parts[1] = ip1.String()
 	networkStr := parts[0]
+
 	// convert 2 IPs into IP range?
 	if f.RangeMultiCol {
 		networkStr = parts[0] + "-" + parts[1]
 	}
+
 	// add network part to single-IP network if it's missing.
 	isNetworkRange := strings.Contains(networkStr, "-")
 	if !isNetworkRange && !strings.Contains(networkStr, "/") {
@@ -554,6 +556,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			networkStr += "/32"
 		}
 	}
+
 	// prep record.
 	record := mmdbtype.Map{}
 	if !f.NoNetwork {
@@ -562,6 +565,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	for i, field := range f.Fields {
 		record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
 	}
+
 	// range insertion or cidr insertion?
 	if isNetworkRange {
 		networkStrParts := strings.Split(networkStr, "-")
