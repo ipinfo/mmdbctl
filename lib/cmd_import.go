@@ -284,8 +284,8 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	)
 	if err != nil {
 		return fmt.Errorf("could not create tree: %w", err)
-	}
 	
+	}
 	// prepare input file.
 	var inFile *os.File
 	if f.In == "" || f.In == "-" {
@@ -345,6 +345,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					continue
 				}
 			}
+
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
 				return err
@@ -439,9 +440,11 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					)
 				}
 			}
+
 			entrycnt += 1
 		}
 	}
+
 	if entrycnt == 0 {
 		return errors.New("nothing to import")
 	}
@@ -508,7 +511,7 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		fmt.Print(decimal)
 		return nil, ErrInvalidInput
 	}
-	
+
 	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
 	if !forceIPv6 && num.Cmp(big.NewInt(4294967295)) <= 0 {
 		ip := make(net.IP, 4)
