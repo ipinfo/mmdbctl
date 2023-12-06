@@ -507,7 +507,6 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 
 	if !success {
 		return nil, errors.New("invalid input: unable to parse decimal string")
-
 	}
 
 	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
