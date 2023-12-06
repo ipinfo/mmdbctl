@@ -47,7 +47,6 @@ type cmdDiffRecord struct {
 }
 
 func doDiff(
-	
 	newDb *maxminddb.Reader,
 	newDbStr string,
 	oldDb *maxminddb.Reader,
