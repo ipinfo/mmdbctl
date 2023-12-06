@@ -591,6 +591,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			)
 		}
 	}
+	
 	return nil
 }
 
