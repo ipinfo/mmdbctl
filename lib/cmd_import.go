@@ -345,7 +345,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					continue
 				}
 			}
-			
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
 				return err
