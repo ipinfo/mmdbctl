@@ -167,6 +167,7 @@ func (f *CmdImportFlags) Init() {
 	)
 
 }
+
 func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	// help?
 	if f.Help || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
@@ -284,7 +285,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	if err != nil {
 		return fmt.Errorf("could not create tree: %w", err)
 	}
-
+	
 	// prepare input file.
 	var inFile *os.File
 	if f.In == "" || f.In == "-" {
@@ -292,8 +293,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	} else {
 		var err error
 		inFile, err = os.Open(f.In)
-
-		
 		if err != nil {
 			return fmt.Errorf("invalid input file %v: %w", f.In, err)
 		}
@@ -346,8 +345,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					continue
 				}
 			}
-
-
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
 				return err
@@ -419,11 +416,8 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			// range insertion or cidr insertion?
 			if isNetworkRange {
 				networkStrParts := strings.Split(networkStr, "-")
-				
 				startIp := net.ParseIP(networkStrParts[0])
-				
 				endIp := net.ParseIP(networkStrParts[1])
-				
 				if err := tree.InsertRange(startIp, endIp, subMap); err != nil {
 					fmt.Fprintf(
 						os.Stderr, "warn: couldn't insert '%v'\n",
@@ -433,9 +427,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			} else {
 				_, network, err := net.ParseCIDR(networkStr)
 				if err != nil {
-
 					return fmt.Errorf(
-
 						"couldn't parse \"%v\": %w",
 						networkStr, err,
 					)
@@ -447,11 +439,9 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					)
 				}
 			}
-
 			entrycnt += 1
 		}
 	}
-
 	if entrycnt == 0 {
 		return errors.New("nothing to import")
 	}
@@ -466,11 +456,9 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 }
 
 func Preprocess(f CmdImportFlags, tree *mmdbwriter.Tree) error {
-	
+	// insert empty values for all fields in 0.0.0.0/0 if requested.
 	if f.IgnoreEmptyVals {
-		
 		_, network, _ := net.ParseCIDR("0.0.0.0/0")
-		
 		record := mmdbtype.Map{}
 		for _, field := range f.Fields {
 			record[mmdbtype.String(field)] = mmdbtype.String("")
@@ -520,6 +508,7 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		fmt.Print(decimal)
 		return nil, ErrInvalidInput
 	}
+	
 	// Convert to IPv4 if not forcing IPv6 and 'num' is within the IPv4 range
 	if !forceIPv6 && num.Cmp(big.NewInt(4294967295)) <= 0 {
 		ip := make(net.IP, 4)
@@ -527,6 +516,7 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 		copy(ip[4-len(b):], b)
 		return ip, nil
 	}
+
 	// Convert to IPv6 if 'num' is within the IPv6 range
 	maxIpv6 := new(big.Int)
 	maxIpv6.SetString("340282366920938463463374607431768211455", 10)
@@ -592,8 +582,6 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 		_, network, err := net.ParseCIDR(networkStr)
 		if err != nil {
 			return fmt.Errorf(
-				//"couldn't parse cidr \"%v\": %w",
-				//This line is giving error
 				"couldn't parse  \"%v\": %w",
 				networkStr, err,
 			)
