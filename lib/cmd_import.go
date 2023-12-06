@@ -487,13 +487,6 @@ func Preprocess(f CmdImportFlags, tree *mmdbwriter.Tree) error {
 	return nil
 }
 
-func intToIP(ipInt *big.Int) net.IP {
-	ip := make(net.IP, net.IPv6len)
-	ipIntBytes := ipInt.Bytes()
-	copy(ip[net.IPv6len-len(ipIntBytes):], ipIntBytes)
-	return ip
-}
-
 func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	// check if the header has a multi-column range.
 	if len(parts) > 1 && parts[0] == "start_ip" && parts[1] == "end_ip" {
