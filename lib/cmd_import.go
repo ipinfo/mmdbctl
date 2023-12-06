@@ -284,8 +284,8 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	)
 	if err != nil {
 		return fmt.Errorf("could not create tree: %w", err)
-	
 	}
+
 	// prepare input file.
 	var inFile *os.File
 	if f.In == "" || f.In == "-" {
@@ -345,6 +345,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 					continue
 				}
 			}
+			
 			err = AppendCSVRecord(f, dataColStart, delim, parts, tree)
 			if err != nil {
 				return err
