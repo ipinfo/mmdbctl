@@ -218,7 +218,6 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 		if f.Csv && f.Tsv || f.Csv && f.Json || f.Tsv && f.Json {
 			return errors.New("multiple input file types specified")
 		} else if f.Csv {
-
 			delim = ','
 		} else if f.Tsv {
 			delim = '\t'
