@@ -167,7 +167,6 @@ func (f *CmdImportFlags) Init() {
 	)
 
 }
-
 func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 	// help?
 	if f.Help || (pflag.NArg() == 1 && pflag.NFlag() == 0) {
@@ -543,52 +542,26 @@ func DecimalStrToIP(decimal string, forceIPv6 bool) (net.IP, error) {
 
 
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
-	
-
-
 	var check bool;
-	
-
-	
 	ip, err := DecimalStrToIP(parts[0], check)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return err
 	}
-
-
 	parts[0] = ip.String()
-
 	ip1, err := DecimalStrToIP(parts[1], check)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return err
 	}
-
-
 	parts[1] = ip1.String()
-
-
-
-
-
 	networkStr := parts[0]
-
-
-	
-
 	// convert 2 IPs into IP range?
 	if f.RangeMultiCol {
 		networkStr = parts[0] + "-" + parts[1]
 	}
-
-
-
-
 	// add network part to single-IP network if it's missing.
 	isNetworkRange := strings.Contains(networkStr, "-")
-
-
 	if !isNetworkRange && !strings.Contains(networkStr, "/") {
 		if f.Ip == 6 && strings.Contains(networkStr, ":") {
 			networkStr += "/128"
@@ -596,8 +569,6 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			networkStr += "/32"
 		}
 	}
-
-
 	// prep record.
 	record := mmdbtype.Map{}
 	if !f.NoNetwork {
@@ -606,10 +577,6 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	for i, field := range f.Fields {
 		record[mmdbtype.String(field)] = mmdbtype.String(parts[i+dataColStart])
 	}
-
-
-
-
 	// range insertion or cidr insertion?
 	if isNetworkRange {
 		networkStrParts := strings.Split(networkStr, "-")
@@ -625,7 +592,6 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	} else {
 		_, network, err := net.ParseCIDR(networkStr)
 		if err != nil {
-
 			return fmt.Errorf(
 				//"couldn't parse cidr \"%v\": %w",
 				//This line is giving error
@@ -640,10 +606,8 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 			)
 		}
 	}
-
 	return nil
 }
-
 func ProcessJsonData(
 	data map[string]interface{},
 	subMap *mmdbtype.Map,
