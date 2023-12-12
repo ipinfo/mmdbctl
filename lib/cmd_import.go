@@ -534,6 +534,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 	if start_ip != nil {
 		parts[0] = start_ip.String()
 	}
+
 	networkStr := parts[0]
 
 	// convert 2 IPs into IP range?
@@ -542,6 +543,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 		if end_ip != nil {
 			parts[1] = end_ip.String()
 		}
+
 		networkStr = parts[0] + "-" + parts[1]
 	}
 
