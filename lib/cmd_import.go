@@ -503,45 +503,44 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 }
 
 func DecimalStrToIP(decimal string) (net.IP, error) {
-	if net.ParseIP(decimal) == nil {
-		num := new(big.Int)
-		num, success := num.SetString(decimal, 10)
+	if net.ParseIP(decimal) != nil {
+		return nil, nil
+	}
+	num := new(big.Int)
+	num, success := num.SetString(decimal, 10)
 
-		maxIpv6 := new(big.Int)
-		maxIpv6.SetString("340282366920938463463374607431768211455", 10)
+	maxIpv6 := new(big.Int)
+	maxIpv6.SetString("340282366920938463463374607431768211455", 10)
 
-		if !success {
-			return nil, errors.New("invalid input for decimal string")
-		}
+	if !success {
+		return nil, errors.New("invalid input for decimal string")
+	}
 
-		if num.Cmp(big.NewInt(4294967295)) <= 0 {
-			ip := make(net.IP, 4)
-			b := num.Bytes()
-			copy(ip[4-len(b):], b)
-			return ip, nil
-		} else if num.Cmp(maxIpv6) <= 0 {
-			ip := make(net.IP, 16)
-			b := num.Bytes()
-			copy(ip[16-len(b):], b)
-			return ip, nil
-		}
+	if num.Cmp(big.NewInt(4294967295)) <= 0 {
+		ip := make(net.IP, 4)
+		b := num.Bytes()
+		copy(ip[4-len(b):], b)
+		return ip, nil
+	} else if num.Cmp(maxIpv6) <= 0 {
+		ip := make(net.IP, 16)
+		b := num.Bytes()
+		copy(ip[16-len(b):], b)
+		return ip, nil
 	}
 	return nil, nil
 }
 
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
-	start_ip, _ := DecimalStrToIP(parts[0])
-	if start_ip != nil {
-		parts[0] = start_ip.String()
+	if startIp, _ := DecimalStrToIP(parts[0]); startIp != nil {
+		parts[0] = startIp.String()
 	}
 
 	networkStr := parts[0]
 
 	// convert 2 IPs into IP range?
 	if f.RangeMultiCol {
-		end_ip, _ := DecimalStrToIP(parts[1])
-		if end_ip != nil {
-			parts[1] = end_ip.String()
+		if endIp, _ := DecimalStrToIP(parts[1]); endIp != nil {
+			parts[1] = endIp.String()
 		}
 
 		networkStr = parts[0] + "-" + parts[1]
