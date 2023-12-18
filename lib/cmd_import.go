@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/ipinfo/cli/lib/iputil"
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/inserter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
@@ -239,7 +239,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 		fieldSrcCnt += 1
 	}
 	if fieldSrcCnt > 1 {
-		return errors.New("conflicting field sources specified.")
+		return errors.New("conflicting field sources specified")
 	}
 	if f.NoFields {
 		f.Fields = []string{}
@@ -502,36 +502,8 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	}
 }
 
-func DecimalStrToIP(decimal string) (net.IP, error) {
-	if net.ParseIP(decimal) != nil {
-		return nil, nil
-	}
-	num := new(big.Int)
-	num, success := num.SetString(decimal, 10)
-
-	maxIpv6 := new(big.Int)
-	maxIpv6.SetString("340282366920938463463374607431768211455", 10)
-
-	if !success {
-		return nil, errors.New("invalid input for decimal string")
-	}
-
-	if num.Cmp(big.NewInt(4294967295)) <= 0 {
-		ip := make(net.IP, 4)
-		b := num.Bytes()
-		copy(ip[4-len(b):], b)
-		return ip, nil
-	} else if num.Cmp(maxIpv6) <= 0 {
-		ip := make(net.IP, 16)
-		b := num.Bytes()
-		copy(ip[16-len(b):], b)
-		return ip, nil
-	}
-	return nil, nil
-}
-
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
-	if startIp, _ := DecimalStrToIP(parts[0]); startIp != nil {
+	if startIp, _ := iputil.DecimalStrToIP(parts[0], false); startIp != nil {
 		parts[0] = startIp.String()
 	}
 
@@ -539,7 +511,7 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 
 	// convert 2 IPs into IP range?
 	if f.RangeMultiCol {
-		if endIp, _ := DecimalStrToIP(parts[1]); endIp != nil {
+		if endIp, _ := iputil.DecimalStrToIP(parts[1], false); endIp != nil {
 			parts[1] = endIp.String()
 		}
 
