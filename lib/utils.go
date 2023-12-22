@@ -1,10 +1,13 @@
 package lib
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
+	"syscall"
 )
 
 func sortedMapKeys(m map[string]string) []string {
@@ -62,4 +65,34 @@ func mapInterfaceToStr(m map[string]interface{}) map[string]string {
 		}
 	}
 	return retVal
+}
+
+func findSectionSeparator(mmdbFile, sep string) (int64, error) {
+	file, err := os.Open(mmdbFile)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	fileSize := fileInfo.Size()
+
+	// Map the mmdb file into memory.
+	mmap, err := syscall.Mmap(int(file.Fd()), 0, int(fileSize), syscall.PROT_READ, syscall.MAP_SHARED)
+	if err != nil {
+		return 0, err
+	}
+	defer syscall.Munmap(mmap)
+
+	// Search the last occurrence of the separator in the file.
+	index := bytes.LastIndex(mmap, []byte(sep))
+	if index != -1 {
+		return int64(index), nil
+	}
+
+	return -1, nil
 }
