@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var (
-	metadataStartMarker = "\xAB\xCD\xEFMaxMind.com"
+const (
+	MetadataStartMarker = "\xAB\xCD\xEFMaxMind.com"
 )
 
 // CmdMetadataFlags are flags expected by CmdMetadata.
@@ -70,6 +70,16 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		return errors.New("format must be one of \"pretty\" or \"json\"")
 	}
 
+	// Offset of this separator is used to determine the metadata start section, data section end and data section size.
+	offset, err := findSectionSeparator(args[0], MetadataStartMarker)
+	if err != nil {
+		return fmt.Errorf("couldn't process the mmdb file: %w", err)
+	}
+
+	if offset == -1 {
+		return errors.New("input valid mmdb file required as first argument")
+	}
+
 	// open tree.
 	db, err := maxminddb.Open(args[0])
 	if err != nil {
@@ -81,25 +91,10 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 	binaryFmt := strconv.Itoa(int(mdFromLib.BinaryFormatMajorVersion)) + "." + strconv.Itoa(int(mdFromLib.BinaryFormatMinorVersion))
 	treeSize := ((int(mdFromLib.RecordSize) * 2) / 8) * int(mdFromLib.NodeCount)
 	dataSectionStartOffset := treeSize + 16
-	var (
-		dataSectionEndOffset       int
-		dataSectionSize            int
-		metadataSectionStartOffset int
-	)
+	dataSectionEndOffset := int(offset)
+	dataSectionSize := int(offset) - treeSize - 16
+	metadataSectionStartOffset := int(offset) + len(MetadataStartMarker)
 
-	// Offset of this separator is used to determine the metadata start section, data section end and data section size.
-	offset, err := findSectionSeparator(args[0], metadataStartMarker)
-	if err != nil {
-		return fmt.Errorf("couldn't process the mmdb file: %w", err)
-	}
-
-	if offset != -1 {
-		dataSectionEndOffset = int(offset)
-		dataSectionSize = int(offset) - treeSize - 16
-		metadataSectionStartOffset = int(offset) + len(metadataStartMarker)
-	} else {
-		return errors.New("input valid mmdb file required as first argument")
-	}
 	if f.Format == "pretty" {
 		fmtEntry := color.New(color.FgCyan)
 		fmtVal := color.New(color.FgGreen)
