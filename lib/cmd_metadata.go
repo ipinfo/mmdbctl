@@ -96,6 +96,11 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 	}
 	dataSectionEndOffset = int(offset)
 	dataSectionSize = int(offset) - treeSize - 16
+	typeSizes, err := traverseDataSection(args[0], int64(dataSectionStartOffset), int64(dataSectionEndOffset))
+	if err != nil {
+		return fmt.Errorf("couldn't process the mmdb file: %w", err)
+	}
+	fmt.Println(typeSizes)
 	metadataSectionStartOffset = int(offset) + len(MetadataStartMarker)
 
 	if f.Format == "pretty" {
@@ -110,7 +115,19 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 				)
 			}
 		}
+
+		typeSizePrintlineGen := func(entryLen string) func(string, string) {
+			return func(name string, val string) {
+				fmt.Printf(
+					"    - %v %v\n",
+					fmtEntry.Sprintf("%-"+entryLen+"s", name),
+					fmtVal.Sprintf("%v", val),
+				)
+			}
+		}
+
 		printline := printlineGen("13")
+		typeSizePrintline := typeSizePrintlineGen("13")
 		printline("Binary Format", binaryFmt)
 		printline("Database Type", mdFromLib.DatabaseType)
 		printline("IP Version", strconv.Itoa(int(mdFromLib.IPVersion)))
@@ -118,6 +135,18 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		printline("Node Count", strconv.Itoa(int(mdFromLib.NodeCount)))
 		printline("Tree Size", strconv.Itoa(treeSize))
 		printline("Data Section Size", strconv.Itoa(dataSectionSize))
+		typeSizePrintline("Pointer Size:", strconv.Itoa(int(typeSizes.PointerSize)))
+		typeSizePrintline("UTF-8 String Size:", strconv.Itoa(int(typeSizes.Utf8StringSize)))
+		typeSizePrintline("Double Size:", strconv.Itoa(int(typeSizes.DoubleSize)))
+		typeSizePrintline("Bytes Size:", strconv.Itoa(int(typeSizes.BytesSize)))
+		typeSizePrintline("Unsigned 16-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned16bitIntSize)))
+		typeSizePrintline("Unsigned 32-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned32bitIntSize)))
+		typeSizePrintline("Signed 32-bit Integer Size:", strconv.Itoa(int(typeSizes.Signed32bitIntSize)))
+		typeSizePrintline("Unsigned 64-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned64bitIntSize)))
+		typeSizePrintline("Unsigned 128-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned128bitIntSize)))
+		typeSizePrintline("Map Key-Value Pair Count:", strconv.Itoa(int(typeSizes.MapKeyValueCount)))
+		typeSizePrintline("Array Length:", strconv.Itoa(int(typeSizes.ArrayLength)))
+		typeSizePrintline("Float Size:", strconv.Itoa(int(typeSizes.FloatSize)))
 		printline("Data Section Start Offset", strconv.Itoa(dataSectionStartOffset))
 		printline("Data Section End Offset", strconv.Itoa(dataSectionEndOffset))
 		printline("Metadata Section Start Offset", strconv.Itoa(metadataSectionStartOffset))
@@ -135,13 +164,27 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		printline("Build Epoch", strconv.Itoa(int(mdFromLib.BuildEpoch)))
 	} else { // json
 		md := struct {
-			BinaryFormatVsn        string            `json:"binary_format"`
-			DatabaseType           string            `json:"db_type"`
-			IPVersion              uint              `json:"ip"`
-			RecordSize             uint              `json:"record_size"`
-			NodeCount              uint              `json:"node_count"`
-			TreeSize               uint              `json:"tree_size"`
-			DataSectionSize        uint              `json:"data_section_size"`
+			BinaryFormatVsn string `json:"binary_format"`
+			DatabaseType    string `json:"db_type"`
+			IPVersion       uint   `json:"ip"`
+			RecordSize      uint   `json:"record_size"`
+			NodeCount       uint   `json:"node_count"`
+			TreeSize        uint   `json:"tree_size"`
+			DataSectionSize uint   `json:"data_section_size"`
+			TypeSize        struct {
+				PointerSize           int64 `json:"pointer_size"`
+				Utf8StringSize        int64 `json:"utf8_string_size"`
+				DoubleSize            int64 `json:"double_size"`
+				BytesSize             int64 `json:"bytes_size"`
+				Unsigned16bitIntSize  int64 `json:"unsigned_16-bit_int_size"`
+				Unsigned32bitIntSize  int64 `json:"unsigned_32-bit_int_size"`
+				Signed32bitIntSize    int64 `json:"signed_32-bit_int_size"`
+				Unsigned64bitIntSize  int64 `json:"unsigned_64-bit_int_size"`
+				Unsigned128bitIntSize int64 `json:"unsigned_128-bit_int_size"`
+				MapKeyValueCount      int64 `json:"map_key_value_pair_count"`
+				ArrayLength           int64 `json:"array_length"`
+				FloatSize             int64 `json:"float_size"`
+			} `json:"type_size"`
 			DataSectionStartOffset uint              `json:"data_section_start_offset"`
 			DataSectionEndOffset   uint              `json:"data_section_end_offset"`
 			MetadataStartOffset    uint              `json:"metadata_section_start_offset"`
@@ -156,6 +199,33 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 			mdFromLib.NodeCount,
 			uint(treeSize),
 			uint(dataSectionSize),
+			struct {
+				PointerSize           int64 "json:\"pointer_size\""
+				Utf8StringSize        int64 "json:\"utf8_string_size\""
+				DoubleSize            int64 "json:\"double_size\""
+				BytesSize             int64 "json:\"bytes_size\""
+				Unsigned16bitIntSize  int64 "json:\"unsigned_16-bit_int_size\""
+				Unsigned32bitIntSize  int64 "json:\"unsigned_32-bit_int_size\""
+				Signed32bitIntSize    int64 "json:\"signed_32-bit_int_size\""
+				Unsigned64bitIntSize  int64 "json:\"unsigned_64-bit_int_size\""
+				Unsigned128bitIntSize int64 "json:\"unsigned_128-bit_int_size\""
+				MapKeyValueCount      int64 "json:\"map_key_value_pair_count\""
+				ArrayLength           int64 "json:\"array_length\""
+				FloatSize             int64 "json:\"float_size\""
+			}{
+				typeSizes.PointerSize,
+				typeSizes.Utf8StringSize,
+				typeSizes.DoubleSize,
+				typeSizes.BytesSize,
+				typeSizes.Unsigned16bitIntSize,
+				typeSizes.Unsigned32bitIntSize,
+				typeSizes.Signed32bitIntSize,
+				typeSizes.Unsigned64bitIntSize,
+				typeSizes.Unsigned128bitIntSize,
+				typeSizes.MapKeyValueCount,
+				typeSizes.ArrayLength,
+				typeSizes.FloatSize,
+			},
 			uint(dataSectionStartOffset),
 			uint(dataSectionEndOffset),
 			uint(metadataSectionStartOffset),
