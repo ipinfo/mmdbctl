@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -18,9 +19,10 @@ const (
 
 // CmdMetadataFlags are flags expected by CmdMetadata.
 type CmdMetadataFlags struct {
-	Help    bool
-	NoColor bool
-	Format  string
+	Help      bool
+	NoColor   bool
+	Format    string
+	DataTypes bool
 }
 
 // Init initializes the common flags available to CmdMetadata with sensible
@@ -43,6 +45,11 @@ func (f *CmdMetadataFlags) Init() {
 		&f.Format,
 		"format", "f", "",
 		_h,
+	)
+	pflag.BoolVar(
+		&f.DataTypes,
+		"data-types", false,
+		"show data type sizes within the data section.",
 	)
 }
 
@@ -70,6 +77,12 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		return errors.New("format must be one of \"pretty\" or \"json\"")
 	}
 
+	mmdbFile, err := os.Open(args[0])
+	if err != nil {
+		return fmt.Errorf("couldn't open mmdb file: %w", err)
+	}
+	defer mmdbFile.Close()
+
 	// open tree.
 	db, err := maxminddb.Open(args[0])
 	if err != nil {
@@ -86,7 +99,7 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 	metadataSectionStartOffset := 0
 
 	// Offset of this separator is used to determine the metadata start section, data section end and data section size.
-	offset, err := findSectionSeparator(args[0], MetadataStartMarker)
+	offset, err := findSectionSeparator(mmdbFile, MetadataStartMarker)
 	if err != nil {
 		return fmt.Errorf("couldn't process the mmdb file: %w", err)
 	}
@@ -96,61 +109,59 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 	}
 	dataSectionEndOffset = int(offset)
 	dataSectionSize = int(offset) - treeSize - 16
-	typeSizes, err := traverseDataSection(args[0], int64(dataSectionStartOffset), int64(dataSectionEndOffset))
-	if err != nil {
-		return fmt.Errorf("couldn't process the mmdb file: %w", err)
+	var typeSizes TypeSizes
+	if f.DataTypes {
+		typeSizes, err = traverseDataSection(mmdbFile, int64(dataSectionStartOffset), int64(dataSectionEndOffset))
+		if err != nil {
+			return fmt.Errorf("couldn't process the mmdb file: %w", err)
+		}
 	}
-	fmt.Println(typeSizes)
+
 	metadataSectionStartOffset = int(offset) + len(MetadataStartMarker)
 
 	if f.Format == "pretty" {
 		fmtEntry := color.New(color.FgCyan)
 		fmtVal := color.New(color.FgGreen)
-		printlineGen := func(entryLen string) func(string, string) {
-			return func(name string, val string) {
+		printlineGen := func(indentSpace, entryLen string) func(string, string, string) {
+			return func(name string, val string, valSimplified string) {
 				fmt.Printf(
-					"- %v %v\n",
+					"%v- %v %v %v\n",
+					indentSpace,
 					fmtEntry.Sprintf("%-"+entryLen+"s", name),
 					fmtVal.Sprintf("%v", val),
+					fmtVal.Sprintf("%v", valSimplified),
 				)
 			}
 		}
 
-		typeSizePrintlineGen := func(entryLen string) func(string, string) {
-			return func(name string, val string) {
-				fmt.Printf(
-					"    - %v %v\n",
-					fmtEntry.Sprintf("%-"+entryLen+"s", name),
-					fmtVal.Sprintf("%v", val),
-				)
-			}
-		}
+		printline := printlineGen("", "13")
 
-		printline := printlineGen("13")
-		typeSizePrintline := typeSizePrintlineGen("13")
-		printline("Binary Format", binaryFmt)
-		printline("Database Type", mdFromLib.DatabaseType)
-		printline("IP Version", strconv.Itoa(int(mdFromLib.IPVersion)))
-		printline("Record Size", strconv.Itoa(int(mdFromLib.RecordSize)))
-		printline("Node Count", strconv.Itoa(int(mdFromLib.NodeCount)))
-		printline("Tree Size", strconv.Itoa(treeSize))
-		printline("Data Section Size", strconv.Itoa(dataSectionSize))
-		typeSizePrintline("Pointer Size:", strconv.Itoa(int(typeSizes.PointerSize)))
-		typeSizePrintline("UTF-8 String Size:", strconv.Itoa(int(typeSizes.Utf8StringSize)))
-		typeSizePrintline("Double Size:", strconv.Itoa(int(typeSizes.DoubleSize)))
-		typeSizePrintline("Bytes Size:", strconv.Itoa(int(typeSizes.BytesSize)))
-		typeSizePrintline("Unsigned 16-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned16bitIntSize)))
-		typeSizePrintline("Unsigned 32-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned32bitIntSize)))
-		typeSizePrintline("Signed 32-bit Integer Size:", strconv.Itoa(int(typeSizes.Signed32bitIntSize)))
-		typeSizePrintline("Unsigned 64-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned64bitIntSize)))
-		typeSizePrintline("Unsigned 128-bit Integer Size:", strconv.Itoa(int(typeSizes.Unsigned128bitIntSize)))
-		typeSizePrintline("Map Key-Value Pair Count:", strconv.Itoa(int(typeSizes.MapKeyValueCount)))
-		typeSizePrintline("Array Length:", strconv.Itoa(int(typeSizes.ArrayLength)))
-		typeSizePrintline("Float Size:", strconv.Itoa(int(typeSizes.FloatSize)))
-		printline("Data Section Start Offset", strconv.Itoa(dataSectionStartOffset))
-		printline("Data Section End Offset", strconv.Itoa(dataSectionEndOffset))
-		printline("Metadata Section Start Offset", strconv.Itoa(metadataSectionStartOffset))
-		printline("Description", "")
+		printline("Binary Format", binaryFmt, "")
+		printline("Database Type", mdFromLib.DatabaseType, "")
+		printline("IP Version", strconv.Itoa(int(mdFromLib.IPVersion)), "")
+		printline("Record Size", strconv.Itoa(int(mdFromLib.RecordSize)), simplifySize(int64(mdFromLib.RecordSize)))
+		printline("Node Count", strconv.Itoa(int(mdFromLib.NodeCount)), simplifySize(int64(mdFromLib.NodeCount)))
+		printline("Tree Size", strconv.Itoa(treeSize), simplifySize(int64(treeSize)))
+		printline("Data Section Size", strconv.Itoa(dataSectionSize), simplifySize(int64(dataSectionSize)))
+		if f.DataTypes {
+			typeSizePrintline := printlineGen("    ", "13")
+			typeSizePrintline("Pointer Size", strconv.Itoa(int(typeSizes.PointerSize)), simplifySize(typeSizes.PointerSize))
+			typeSizePrintline("UTF-8 String Size", strconv.Itoa(int(typeSizes.Utf8StringSize)), simplifySize(typeSizes.Utf8StringSize))
+			typeSizePrintline("Double Size", strconv.Itoa(int(typeSizes.DoubleSize)), simplifySize(typeSizes.DoubleSize))
+			typeSizePrintline("Bytes Size", strconv.Itoa(int(typeSizes.BytesSize)), simplifySize(typeSizes.BytesSize))
+			typeSizePrintline("Unsigned 16-bit Integer Size", strconv.Itoa(int(typeSizes.Unsigned16bitIntSize)), simplifySize(typeSizes.Unsigned16bitIntSize))
+			typeSizePrintline("Unsigned 32-bit Integer Size", strconv.Itoa(int(typeSizes.Unsigned32bitIntSize)), simplifySize(typeSizes.Unsigned32bitIntSize))
+			typeSizePrintline("Signed 32-bit Integer Size", strconv.Itoa(int(typeSizes.Signed32bitIntSize)), simplifySize(typeSizes.Signed32bitIntSize))
+			typeSizePrintline("Unsigned 64-bit Integer Size", strconv.Itoa(int(typeSizes.Unsigned64bitIntSize)), simplifySize(typeSizes.Unsigned64bitIntSize))
+			typeSizePrintline("Unsigned 128-bit Integer Size", strconv.Itoa(int(typeSizes.Unsigned128bitIntSize)), simplifySize(typeSizes.Unsigned128bitIntSize))
+			typeSizePrintline("Map Key-Value Pair Count", strconv.Itoa(int(typeSizes.MapKeyValueCount)), simplifySize(typeSizes.MapKeyValueCount))
+			typeSizePrintline("Array Length", strconv.Itoa(int(typeSizes.ArrayLength)), simplifySize(typeSizes.ArrayLength))
+			typeSizePrintline("Float Size", strconv.Itoa(int(typeSizes.FloatSize)), simplifySize(typeSizes.FloatSize))
+		}
+		printline("Data Section Start Offset", strconv.Itoa(dataSectionStartOffset), simplifySize(int64(dataSectionStartOffset)))
+		printline("Data Section End Offset", strconv.Itoa(dataSectionEndOffset), simplifySize(int64(dataSectionEndOffset)))
+		printline("Metadata Section Start Offset", strconv.Itoa(metadataSectionStartOffset), simplifySize(int64(metadataSectionStartOffset)))
+		printline("Description", "", "")
 		descKeys, descVals := sortedMapKeysAndVals(mdFromLib.Description)
 		longestDescKeyLen := strconv.Itoa(len(longestStrInStringSlice(descKeys)))
 		for i := 0; i < len(descKeys); i++ {
@@ -160,31 +171,22 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 				fmtVal.Sprintf("%v", descVals[i]),
 			)
 		}
-		printline("Languages", strings.Join(mdFromLib.Languages, ", "))
-		printline("Build Epoch", strconv.Itoa(int(mdFromLib.BuildEpoch)))
+		printline("Languages", strings.Join(mdFromLib.Languages, ", "), "")
+		printline("Build Epoch", strconv.Itoa(int(mdFromLib.BuildEpoch)), "")
 	} else { // json
+		var typeSizesPtr *TypeSizes
+		if f.DataTypes {
+			typeSizesPtr = &typeSizes
+		}
 		md := struct {
-			BinaryFormatVsn string `json:"binary_format"`
-			DatabaseType    string `json:"db_type"`
-			IPVersion       uint   `json:"ip"`
-			RecordSize      uint   `json:"record_size"`
-			NodeCount       uint   `json:"node_count"`
-			TreeSize        uint   `json:"tree_size"`
-			DataSectionSize uint   `json:"data_section_size"`
-			TypeSize        struct {
-				PointerSize           int64 `json:"pointer_size"`
-				Utf8StringSize        int64 `json:"utf8_string_size"`
-				DoubleSize            int64 `json:"double_size"`
-				BytesSize             int64 `json:"bytes_size"`
-				Unsigned16bitIntSize  int64 `json:"unsigned_16-bit_int_size"`
-				Unsigned32bitIntSize  int64 `json:"unsigned_32-bit_int_size"`
-				Signed32bitIntSize    int64 `json:"signed_32-bit_int_size"`
-				Unsigned64bitIntSize  int64 `json:"unsigned_64-bit_int_size"`
-				Unsigned128bitIntSize int64 `json:"unsigned_128-bit_int_size"`
-				MapKeyValueCount      int64 `json:"map_key_value_pair_count"`
-				ArrayLength           int64 `json:"array_length"`
-				FloatSize             int64 `json:"float_size"`
-			} `json:"type_size"`
+			BinaryFormatVsn        string            `json:"binary_format"`
+			DatabaseType           string            `json:"db_type"`
+			IPVersion              uint              `json:"ip"`
+			RecordSize             uint              `json:"record_size"`
+			NodeCount              uint              `json:"node_count"`
+			TreeSize               uint              `json:"tree_size"`
+			DataSectionSize        uint              `json:"data_section_size"`
+			TypeSize               *TypeSizes        `json:"type_size,omitempty"`
 			DataSectionStartOffset uint              `json:"data_section_start_offset"`
 			DataSectionEndOffset   uint              `json:"data_section_end_offset"`
 			MetadataStartOffset    uint              `json:"metadata_section_start_offset"`
@@ -199,33 +201,7 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 			mdFromLib.NodeCount,
 			uint(treeSize),
 			uint(dataSectionSize),
-			struct {
-				PointerSize           int64 "json:\"pointer_size\""
-				Utf8StringSize        int64 "json:\"utf8_string_size\""
-				DoubleSize            int64 "json:\"double_size\""
-				BytesSize             int64 "json:\"bytes_size\""
-				Unsigned16bitIntSize  int64 "json:\"unsigned_16-bit_int_size\""
-				Unsigned32bitIntSize  int64 "json:\"unsigned_32-bit_int_size\""
-				Signed32bitIntSize    int64 "json:\"signed_32-bit_int_size\""
-				Unsigned64bitIntSize  int64 "json:\"unsigned_64-bit_int_size\""
-				Unsigned128bitIntSize int64 "json:\"unsigned_128-bit_int_size\""
-				MapKeyValueCount      int64 "json:\"map_key_value_pair_count\""
-				ArrayLength           int64 "json:\"array_length\""
-				FloatSize             int64 "json:\"float_size\""
-			}{
-				typeSizes.PointerSize,
-				typeSizes.Utf8StringSize,
-				typeSizes.DoubleSize,
-				typeSizes.BytesSize,
-				typeSizes.Unsigned16bitIntSize,
-				typeSizes.Unsigned32bitIntSize,
-				typeSizes.Signed32bitIntSize,
-				typeSizes.Unsigned64bitIntSize,
-				typeSizes.Unsigned128bitIntSize,
-				typeSizes.MapKeyValueCount,
-				typeSizes.ArrayLength,
-				typeSizes.FloatSize,
-			},
+			typeSizesPtr,
 			uint(dataSectionStartOffset),
 			uint(dataSectionEndOffset),
 			uint(metadataSectionStartOffset),
