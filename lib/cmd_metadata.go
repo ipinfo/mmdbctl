@@ -76,8 +76,8 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		return errors.New("format must be one of \"pretty\" or \"json\"")
 	}
 
-	mmdbFile := args[0]
 	// open tree.
+	mmdbFile := args[0]
 	db, err := maxminddb.Open(mmdbFile)
 	if err != nil {
 		return fmt.Errorf("couldn't open mmdb file: %w", err)
