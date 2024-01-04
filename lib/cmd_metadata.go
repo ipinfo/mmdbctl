@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -77,14 +76,9 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		return errors.New("format must be one of \"pretty\" or \"json\"")
 	}
 
-	mmdbFile, err := os.Open(args[0])
-	if err != nil {
-		return fmt.Errorf("couldn't open mmdb file: %w", err)
-	}
-	defer mmdbFile.Close()
-
+	mmdbFile := args[0]
 	// open tree.
-	db, err := maxminddb.Open(args[0])
+	db, err := maxminddb.Open(mmdbFile)
 	if err != nil {
 		return fmt.Errorf("couldn't open mmdb file: %w", err)
 	}
@@ -116,7 +110,6 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 			return fmt.Errorf("couldn't process the mmdb file: %w", err)
 		}
 	}
-
 	metadataSectionStartOffset = int(offset) + len(MetadataStartMarker)
 
 	if f.Format == "pretty" {
@@ -135,7 +128,6 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		}
 
 		printline := printlineGen("", "13")
-
 		printline("Binary Format", binaryFmt, "")
 		printline("Database Type", mdFromLib.DatabaseType, "")
 		printline("IP Version", strconv.Itoa(int(mdFromLib.IPVersion)), "")
@@ -186,7 +178,7 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 			NodeCount              uint              `json:"node_count"`
 			TreeSize               uint              `json:"tree_size"`
 			DataSectionSize        uint              `json:"data_section_size"`
-			TypeSize               *TypeSizes        `json:"type_size,omitempty"`
+			TypeSize               *TypeSizes        `json:"data_type_sizes,omitempty"`
 			DataSectionStartOffset uint              `json:"data_section_start_offset"`
 			DataSectionEndOffset   uint              `json:"data_section_end_offset"`
 			MetadataStartOffset    uint              `json:"metadata_section_start_offset"`

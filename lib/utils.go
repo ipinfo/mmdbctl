@@ -68,8 +68,14 @@ func mapInterfaceToStr(m map[string]interface{}) map[string]string {
 	return retVal
 }
 
-func findSectionSeparator(mmdbFile *os.File, sep string) (int64, error) {
-	fileInfo, err := mmdbFile.Stat()
+func findSectionSeparator(mmdbFile string, sep string) (int64, error) {
+	file, err := os.Open(mmdbFile)
+	if err != nil {
+		return 0, fmt.Errorf("couldn't open mmdb file: %w", err)
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
 	if err != nil {
 		return 0, err
 	}
@@ -77,7 +83,7 @@ func findSectionSeparator(mmdbFile *os.File, sep string) (int64, error) {
 	fileSize := fileInfo.Size()
 
 	// Map the mmdb file into memory.
-	mmap, err := syscall.Mmap(int(mmdbFile.Fd()), 0, int(fileSize), syscall.PROT_READ, syscall.MAP_SHARED)
+	mmap, err := syscall.Mmap(int(file.Fd()), 0, int(fileSize), syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		return 0, err
 	}
@@ -120,19 +126,25 @@ type TypeSizes struct {
 	Utf8StringSize        int64 `json:"utf8_string_size"`
 	DoubleSize            int64 `json:"double_size"`
 	BytesSize             int64 `json:"bytes_size"`
-	Unsigned16bitIntSize  int64 `json:"unsigned_16-bit_int_size"`
-	Unsigned32bitIntSize  int64 `json:"unsigned_32-bit_int_size"`
-	Signed32bitIntSize    int64 `json:"signed_32-bit_int_size"`
-	Unsigned64bitIntSize  int64 `json:"unsigned_64-bit_int_size"`
-	Unsigned128bitIntSize int64 `json:"unsigned_128-bit_int_size"`
+	Unsigned16bitIntSize  int64 `json:"unsigned_16bit_int_size"`
+	Unsigned32bitIntSize  int64 `json:"unsigned_32bit_int_size"`
+	Signed32bitIntSize    int64 `json:"signed_32bit_int_size"`
+	Unsigned64bitIntSize  int64 `json:"unsigned_64bit_int_size"`
+	Unsigned128bitIntSize int64 `json:"unsigned_128bit_int_size"`
 	MapKeyValueCount      int64 `json:"map_key_value_pair_count"`
 	ArrayLength           int64 `json:"array_length"`
 	FloatSize             int64 `json:"float_size"`
 }
 
-func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) (TypeSizes, error) {
+func traverseDataSection(mmdbFile string, startOffset int64, endOffset int64) (TypeSizes, error) {
+	file, err := os.Open(mmdbFile)
+	if err != nil {
+		return TypeSizes{}, fmt.Errorf("couldn't open mmdb file: %w", err)
+	}
+	defer file.Close()
+
 	// Go to the start offset of the data section.
-	_, err := mmdbFile.Seek(startOffset, 0)
+	_, err = file.Seek(startOffset, 0)
 	if err != nil {
 		return TypeSizes{}, err
 	}
@@ -142,7 +154,7 @@ func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) 
 	// Read and process bytes until the end offset is reached.
 	for offset := startOffset; offset < endOffset; {
 		var controlByte [1]byte
-		_, err := mmdbFile.Read(controlByte[:])
+		_, err := file.Read(controlByte[:])
 		if err != nil {
 			return TypeSizes{}, err
 		}
@@ -156,7 +168,7 @@ func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) 
 		if dataType == 0 {
 			// Read actual type number from the next byte
 			var extendedTypeByte [1]byte
-			_, err := mmdbFile.Read(extendedTypeByte[:])
+			_, err := file.Read(extendedTypeByte[:])
 			if err != nil {
 				return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 			}
@@ -164,25 +176,25 @@ func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) 
 
 			switch extendedTypeByte[0] {
 			case 1: // unsigned 32-bit int.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.Signed32bitIntSize += int64(payloadSize)
 			case 2: // unsigned 64-bit int.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.Unsigned64bitIntSize += int64(payloadSize)
 			case 3: // unsigned 128-bit int.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.Unsigned128bitIntSize += int64(payloadSize)
 			case 4: // array.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
@@ -204,7 +216,7 @@ func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) 
 					typeSizes.PointerSize += 3
 				}
 			case 2: // UTF-8 string.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
@@ -212,32 +224,31 @@ func traverseDataSection(mmdbFile *os.File, startOffset int64, endOffset int64) 
 			case 3: // Double.
 				typeSizes.DoubleSize += 8
 			case 4: // Byte.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.BytesSize += int64(payloadSize)
 			case 5: // unsigned 16-bit int.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.Unsigned16bitIntSize += int64(payloadSize)
 			case 6: // unsigned 32-bit int.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.Unsigned32bitIntSize += int64(payloadSize)
 			case 7: // map.
-				payloadSize, offset, err = payloadCalculation(mmdbFile, payloadSize, offset)
+				payloadSize, offset, err = payloadCalculation(file, payloadSize, offset)
 				if err != nil {
 					return TypeSizes{}, fmt.Errorf("couldn't read the file: %v", err)
 				}
 				typeSizes.MapKeyValueCount += int64(payloadSize)
 			}
 		}
-
 	}
 
 	return typeSizes, nil
