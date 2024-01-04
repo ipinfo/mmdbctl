@@ -13,11 +13,12 @@ var predictMetadataFmts = []string{"pretty", "json"}
 
 var completionsMetadata = &complete.Command{
 	Flags: map[string]complete.Predictor{
-		"--nocolor": predict.Nothing,
-		"-h":        predict.Nothing,
-		"--help":    predict.Nothing,
-		"-f":        predict.Set(predictMetadataFmts),
-		"--format":  predict.Set(predictMetadataFmts),
+		"--nocolor":    predict.Nothing,
+		"--data-types": predict.Nothing,
+		"-h":           predict.Nothing,
+		"--help":       predict.Nothing,
+		"-f":           predict.Set(predictMetadataFmts),
+		"--format":     predict.Set(predictMetadataFmts),
 	},
 }
 
@@ -29,6 +30,8 @@ Options:
   General:
     --nocolor
       disable colored output.
+    --data-types
+      show data type sizes within the data section.
     --help, -h
       show help.
 
