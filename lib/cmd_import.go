@@ -362,6 +362,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			return err
 		}
 
+		fieldsResolved := false
 		for {
 			// Decode one JSON document.
 			var row interface{}
@@ -375,6 +376,11 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				break
 			}
 			mResult := row.(map[string]interface{})
+
+			if !fieldsResolved {
+				fieldsResolved = true
+				ParseJSONKeys(mResult, &f)
+			}
 
 			// convert 2 IPs into IP range?
 			var networkStr string
@@ -409,7 +415,7 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			}
 
 			// prep record.
-			errProcessData := ProcessJsonData(mResult, &subMap)
+			errProcessData := ProcessJsonData(mResult, f, &subMap)
 			if errProcessData != nil {
 				return fmt.Errorf("failed to map to mmdb.type err: %w", errProcessData)
 			}
@@ -502,6 +508,31 @@ func ParseCSVHeaders(parts []string, f *CmdImportFlags, dataColStart *int) {
 	}
 }
 
+func ParseJSONKeys(result map[string]interface{}, f *CmdImportFlags) {
+	if _, hasStartIp := result["start_ip"].(string); hasStartIp {
+		if _, hasEndIp := result["end_ip"].(string); hasEndIp {
+			f.RangeMultiCol = true
+
+			if _, hasJoinKey := result["join_key"].(string); hasJoinKey {
+				f.JoinKeyCol = true
+			}
+		}
+	}
+
+	// determine fields
+	// NOTE: even though there are no headers for JSON, we reuse that variable to signal the need to extract fields
+	if f.FieldsFromHdr {
+		for key := range result {
+			switch key {
+			case "start_ip", "end_ip", "join_key", "range":
+				continue
+			default:
+				f.Fields = append(f.Fields, key)
+			}
+		}
+	}
+}
+
 func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []string, tree *mmdbwriter.Tree) error {
 	if startIp, _ := iputil.DecimalStrToIP(parts[0], false); startIp != nil {
 		parts[0] = startIp.String()
@@ -569,15 +600,21 @@ func AppendCSVRecord(f CmdImportFlags, dataColStart int, delim rune, parts []str
 
 func ProcessJsonData(
 	data map[string]interface{},
+	f CmdImportFlags,
 	subMap *mmdbtype.Map,
 ) error {
 	// Insert each key-value pair into the map
-	for key, value := range data {
+	for _, field := range f.Fields {
+		value, ok := data[field]
+		if !ok {
+			continue
+		}
+
 		mmdbValue, err := ConvertToMMDBType(value)
 		if err != nil {
 			return fmt.Errorf("failed to convert value to MMDB type: %v", err)
 		}
-		(*subMap)[mmdbtype.String(key)] = mmdbValue
+		(*subMap)[mmdbtype.String(field)] = mmdbValue
 	}
 
 	return nil
