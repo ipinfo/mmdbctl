@@ -1,7 +1,7 @@
+# 1.4.4
+
+- Revert back to `maxmind/mmdbwriter`
+
 # 1.4.3
 
-* Temporarily use max-info/mmdbwriter
-
-## Pull Requests
-
-* [#18](https://github.com/ipinfo/mmdbctl/pull/18)
+- Temporarily use `max-info/mmdbwriter`
