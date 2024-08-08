@@ -31,7 +31,7 @@ curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/deb.s
 OR
 
 ```bash
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.4.deb
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.6.deb
 sudo dpkg -i mmdbctl_1.4.5.deb
 ```
 
@@ -91,9 +91,9 @@ After choosing a platform `PLAT` from above, run:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.4_${PLAT}.tar.gz
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.6_${PLAT}.tar.gz
 # OR
-wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.4_${PLAT}.tar.gz
+wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.5/mmdbctl_1.4.6_${PLAT}.tar.gz
 tar -xvf mmdbctl_1.4.5_${PLAT}.tar.gz
 mv mmdbctl_1.4.5_${PLAT} /usr/local/bin/mmdbctl
 ```
