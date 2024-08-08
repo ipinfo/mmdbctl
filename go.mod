@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/edsrzf/mmap-go v1.1.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect

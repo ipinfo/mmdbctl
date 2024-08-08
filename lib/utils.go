@@ -8,7 +8,8 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"syscall"
+
+	"github.com/edsrzf/mmap-go"
 )
 
 func sortedMapKeys(m map[string]string) []string {
@@ -75,19 +76,12 @@ func findSectionSeparator(mmdbFile string, sep string) (int64, error) {
 	}
 	defer file.Close()
 
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return 0, err
-	}
-
-	fileSize := fileInfo.Size()
-
 	// Map the mmdb file into memory.
-	mmap, err := syscall.Mmap(int(file.Fd()), 0, int(fileSize), syscall.PROT_READ, syscall.MAP_SHARED)
+	mmap, err := mmap.Map(file, mmap.RDONLY, 0)
 	if err != nil {
 		return 0, err
 	}
-	defer syscall.Munmap(mmap)
+	defer mmap.Unmap()
 
 	// Search the last occurrence of the separator in the file.
 	index := bytes.LastIndex(mmap, []byte(sep))
