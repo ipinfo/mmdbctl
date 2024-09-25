@@ -111,6 +111,11 @@ func CmdRead(f CmdReadFlags, args []string, printHelp func()) error {
 			}
 			continue
 		}
+
+		if f.Format == "json-compact" || f.Format == "json-pretty" {
+			record["ip"] = ip
+		}
+
 		recordStr := mapInterfaceToStr(record)
 
 		if !hdrWritten {
