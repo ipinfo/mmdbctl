@@ -132,7 +132,7 @@ func CmdMetadata(f CmdMetadataFlags, args []string, printHelp func()) error {
 		printline("Database Type", mdFromLib.DatabaseType, "")
 		printline("IP Version", strconv.Itoa(int(mdFromLib.IPVersion)), "")
 		printline("Record Size", strconv.Itoa(int(mdFromLib.RecordSize)), simplifySize(int64(mdFromLib.RecordSize)))
-		printline("Node Count", strconv.Itoa(int(mdFromLib.NodeCount)), simplifySize(int64(mdFromLib.NodeCount)))
+		printline("Node Count", strconv.Itoa(int(mdFromLib.NodeCount)), "")
 		printline("Tree Size", strconv.Itoa(treeSize), simplifySize(int64(treeSize)))
 		printline("Data Section Size", strconv.Itoa(dataSectionSize), simplifySize(int64(dataSectionSize)))
 		if f.DataTypes {
