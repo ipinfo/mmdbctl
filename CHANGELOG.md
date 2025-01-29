@@ -1,3 +1,8 @@
+# 1.4.7
+
+- [dbaf552](https://www.github.com/ipinfo/mmdbctl/commit/dbaf552) Upgrade to latest `ipinfo/cli` commit, fixing CSV values being written to stdout
+- [508bba1](https://www.github.com/ipinfo/mmdbctl/commit/508bba1) `read`: include IP in JSON output
+
 # 1.4.6
 
 - [#39](https://github.com/ipinfo/mmdbctl/pull/39) Switch to "github.com/edsrzf/mmap-go" for cross-platform mmap implementation (to make Windows builds work again)
