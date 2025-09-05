@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VSN=1.4.7
+VSN=1.4.8
 
 curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-${VSN}/mmdbctl_${VSN}.deb
 sudo dpkg -i mmdbctl_${VSN}.deb

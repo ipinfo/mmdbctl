@@ -1,3 +1,7 @@
+# 1.4.8
+
+- [#41 cmd/metadata: do not show size for node count](https://github.com/ipinfo/mmdbctl/pull/41)
+
 # 1.4.7
 
 - [dbaf552](https://www.github.com/ipinfo/mmdbctl/commit/dbaf552) Upgrade to latest `ipinfo/cli` commit, fixing CSV values being written to stdout
