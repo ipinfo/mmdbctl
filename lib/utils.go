@@ -112,7 +112,27 @@ func simplifySize(size int64) string {
 	} else {
 		return ""
 	}
+}
 
+func simplifyCount(size int64) string {
+	const (
+		K = 1e3
+		M = 1e6
+		G = 1e9
+		T = 1e12
+	)
+
+	if size >= T {
+		return fmt.Sprintf("(%.2f T)", float64(size)/float64(T))
+	} else if size >= G {
+		return fmt.Sprintf("(%.2f G)", float64(size)/float64(G))
+	} else if size >= M {
+		return fmt.Sprintf("(%.2f M)", float64(size)/float64(M))
+	} else if size >= K {
+		return fmt.Sprintf("(%.2f K)", float64(size)/float64(K))
+	} else {
+		return ""
+	}
 }
 
 type TypeSizes struct {
