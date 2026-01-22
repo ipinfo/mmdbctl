@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -8,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oschwald/maxminddb-golang"
+	maxminddb "github.com/oschwald/maxminddb-golang/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -112,20 +113,38 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 			tsvwr := NewTsvWriter(outFile)
 			wr = tsvwr
 		}
-		record := make(map[string]interface{})
-		networks := db.Networks(maxminddb.SkipAliasedNetworks)
-		for networks.Next() {
-			subnet, err := networks.Network(&record)
-			if err != nil {
-				return fmt.Errorf("failed to get record for next subnet: %w", err)
+
+		// Cache for decoded and serialized records, keyed by data offset.
+		// Many networks can point to the same data record in MMDB files.
+		cache := make(map[uintptr]map[string]string)
+		var hdrKeys []string
+
+		for result := range db.Networks() {
+			if err := result.Err(); err != nil {
+				return fmt.Errorf("failed networks traversal: %w", err)
 			}
 
-			recordStr := mapInterfaceToStr(record)
+			offset := result.Offset()
+			prefix := result.Prefix()
+
+			var recordStr map[string]string
+			if cached, ok := cache[offset]; ok {
+				recordStr = cached
+			} else {
+				// Cache miss: decode and serialize.
+				record := make(map[string]any)
+				if err := result.Decode(&record); err != nil {
+					return fmt.Errorf("failed to decode record: %w", err)
+				}
+				recordStr = mapInterfaceToStr(record)
+				cache[offset] = recordStr
+			}
+
 			if !hdrWritten {
 				hdrWritten = true
-
+				hdrKeys = sortedMapKeys(recordStr)
 				if !f.NoHdr {
-					hdr := append([]string{"range"}, sortedMapKeys(recordStr)...)
+					hdr := append([]string{"range"}, hdrKeys...)
 					if err := wr.Write(hdr); err != nil {
 						return fmt.Errorf(
 							"failed to write header %v: %w",
@@ -135,10 +154,13 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 				}
 			}
 
-			line := append(
-				[]string{subnet.String()},
-				sortedMapValsByKeys(recordStr)...,
-			)
+			// Build values in header key order, using empty string for missing keys.
+			vals := make([]string, len(hdrKeys))
+			for i, k := range hdrKeys {
+				vals[i] = recordStr[k] // Returns "" if key doesn't exist
+			}
+
+			line := append([]string{prefix.String()}, vals...)
 			if err := wr.Write(line); err != nil {
 				return fmt.Errorf("failed to write line %v: %w", line, err)
 			}
@@ -147,25 +169,50 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 		if err := wr.Error(); err != nil {
 			return fmt.Errorf("writer had failure: %w", err)
 		}
-		if err := networks.Err(); err != nil {
-			return fmt.Errorf("failed networks traversal: %w", err)
-		}
 	} else if f.Format == "json" {
-		networks := db.Networks(maxminddb.SkipAliasedNetworks)
-		enc := json.NewEncoder(outFile)
-		for networks.Next() {
-			record := make(map[string]interface{})
+		// Cache for JSON-encoded records (without "range" field), keyed by data offset.
+		cache := make(map[uintptr][]byte)
+		bw := bufio.NewWriter(outFile)
 
-			subnet, err := networks.Network(&record)
-			if err != nil {
-				return fmt.Errorf("failed to get record for next subnet: %w", err)
+		for result := range db.Networks() {
+			if err := result.Err(); err != nil {
+				return fmt.Errorf("failed networks traversal: %w", err)
 			}
-			record["range"] = subnet.String()
-			enc.Encode(record)
+
+			offset := result.Offset()
+			prefix := result.Prefix()
+
+			var jsonSuffix []byte
+			if cached, ok := cache[offset]; ok {
+				jsonSuffix = cached
+			} else {
+				// Cache miss: decode and encode to JSON.
+				record := make(map[string]any)
+				if err := result.Decode(&record); err != nil {
+					return fmt.Errorf("failed to decode record: %w", err)
+				}
+
+				encoded, err := json.Marshal(record)
+				if err != nil {
+					return fmt.Errorf("failed to encode record: %w", err)
+				}
+				// Cache everything after the opening '{'.
+				jsonSuffix = encoded[1:]
+				cache[offset] = jsonSuffix
+			}
+
+			// Write: {"range":"<prefix>",...}\n
+			// jsonSuffix is either "}" (empty record) or `"key":val,...}`
+			bw.WriteString(`{"range":"`)
+			bw.WriteString(prefix.String())
+			bw.WriteString(`"`)
+			if len(jsonSuffix) > 1 { // More than just "}"
+				bw.WriteByte(',')
+			}
+			bw.Write(jsonSuffix)
+			bw.WriteByte('\n')
 		}
-		if err := networks.Err(); err != nil {
-			return fmt.Errorf("failed networks traversal: %w", err)
-		}
+		bw.Flush()
 	}
 	return nil
 }
