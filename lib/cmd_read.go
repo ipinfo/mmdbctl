@@ -4,11 +4,12 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/ipinfo/cli/lib/iputil"
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -102,7 +103,17 @@ func CmdRead(f CmdReadFlags, args []string, printHelp func()) error {
 	}
 	for _, ip := range ips {
 		record := make(map[string]interface{})
-		if err := db.Lookup(ip, &record); err != nil || len(record) == 0 {
+		addr, ok := netip.AddrFromSlice(ip)
+		if !ok {
+			if !requiresHdr {
+				fmt.Fprintf(os.Stderr,
+					"err: invalid IP address %s\n",
+					ip.String(),
+				)
+			}
+			continue
+		}
+		if err := db.Lookup(addr).Decode(&record); err != nil || len(record) == 0 {
 			if !requiresHdr {
 				fmt.Fprintf(os.Stderr,
 					"err: couldn't get data for %s\n",

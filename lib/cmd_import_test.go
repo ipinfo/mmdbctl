@@ -1,13 +1,13 @@
 package lib
 
 import (
-	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 )
 
 // verifyMMDBContent is a test helper that verifies MMDB file contains expected entries
@@ -29,14 +29,14 @@ func verifyMMDBContent(t *testing.T, mmdbPath string, testCases []struct {
 	defer db.Close()
 
 	for _, tc := range testCases {
-		ip := net.ParseIP(tc.ip)
-		if ip == nil {
+		addr, err := netip.ParseAddr(tc.ip)
+		if err != nil {
 			t.Errorf("failed to parse IP: %s", tc.ip)
 			continue
 		}
 
 		var record map[string]interface{}
-		err := db.Lookup(ip, &record)
+		err = db.Lookup(addr).Decode(&record)
 		if err != nil {
 			t.Errorf("failed to lookup IP %s: %s", tc.ip, err.Error())
 			continue
