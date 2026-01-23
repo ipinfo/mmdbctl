@@ -2,12 +2,15 @@ package lib
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
+
+const rangePlaceholder = "__RANGE__"
 
 // jsonExporter exports records in JSON Lines format.
 type jsonExporter struct {
@@ -26,32 +29,24 @@ func (e *jsonExporter) WriteRecord(result maxminddb.Result) error {
 	offset := result.Offset()
 	prefix := result.Prefix()
 
-	var jsonSuffix []byte
-	if cached, ok := e.cache[offset]; ok {
-		jsonSuffix = cached
-	} else {
+	cached, ok := e.cache[offset]
+	if !ok {
 		record := make(map[string]any)
 		if err := result.Decode(&record); err != nil {
 			return fmt.Errorf("failed to decode record: %w", err)
 		}
+		record["range"] = rangePlaceholder
 
 		encoded, err := json.Marshal(record)
 		if err != nil {
 			return fmt.Errorf("failed to encode record: %w", err)
 		}
-		// Cache everything after the opening '{'.
-		jsonSuffix = encoded[1:]
-		e.cache[offset] = jsonSuffix
+		cached = encoded
+		e.cache[offset] = cached
 	}
 
-	// Write: {"range":"<prefix>",...}\n
-	e.bw.WriteString(`{"range":"`)
-	e.bw.WriteString(prefix.String())
-	e.bw.WriteString(`"`)
-	if len(jsonSuffix) > 1 { // More than just "}"
-		e.bw.WriteByte(',')
-	}
-	e.bw.Write(jsonSuffix)
+	line := bytes.Replace(cached, []byte(rangePlaceholder), []byte(prefix.String()), 1)
+	e.bw.Write(line)
 	e.bw.WriteByte('\n')
 	return nil
 }
