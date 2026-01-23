@@ -1,13 +1,12 @@
 package lib
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"reflect"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -51,33 +50,32 @@ func doDiff(
 	newDbStr string,
 	oldDb *maxminddb.Reader,
 	oldDbStr string,
-) (map[interface{}]*net.IPNet, map[interface{}]cmdDiffRecord, error) {
-	modifiedSubnets := map[interface{}]*net.IPNet{}
-	modifiedRecords := map[interface{}]cmdDiffRecord{}
-	networksA := newDb.Networks(maxminddb.SkipAliasedNetworks)
-	for networksA.Next() {
+) (map[netip.Prefix]netip.Prefix, map[netip.Prefix]cmdDiffRecord, error) {
+	modifiedSubnets := map[netip.Prefix]netip.Prefix{}
+	modifiedRecords := map[netip.Prefix]cmdDiffRecord{}
+	for result := range newDb.Networks() {
 		var recordA interface{}
 		var recordB interface{}
 
-		subnetA, err := networksA.Network(&recordA)
-		if err != nil {
+		if err := result.Decode(&recordA); err != nil {
 			return nil, nil, fmt.Errorf(
 				"failed to get record for subnet from %v: %w",
 				newDbStr, err,
 			)
 		}
+		subnetA := result.Prefix()
 
-		subnetB, _, err := oldDb.LookupNetwork(subnetA.IP, &recordB)
-		if err != nil {
+		lookupResult := oldDb.Lookup(subnetA.Addr())
+		if err := lookupResult.Decode(&recordB); err != nil {
 			return nil, nil, fmt.Errorf(
 				"failed to get record for IP %v from %v: %w",
-				subnetA.IP, oldDbStr, err,
+				subnetA.Addr(), oldDbStr, err,
 			)
 		}
+		subnetB := lookupResult.Prefix()
 
 		// unequal subnets?
-		if bytes.Compare(subnetA.IP, subnetB.IP) != 0 ||
-			bytes.Compare(subnetA.Mask, subnetB.Mask) != 0 {
+		if subnetA != subnetB {
 			modifiedSubnets[subnetA] = subnetB
 			continue
 		}
@@ -89,12 +87,6 @@ func doDiff(
 				newr: recordA,
 			}
 		}
-	}
-	if networksA.Err() != nil {
-		return nil, nil, fmt.Errorf(
-			"failed traversing networks of %v: %w",
-			newDbStr, networksA.Err(),
-		)
 	}
 
 	return modifiedSubnets, modifiedRecords, nil

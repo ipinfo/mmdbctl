@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -112,13 +112,12 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 			tsvwr := NewTsvWriter(outFile)
 			wr = tsvwr
 		}
-		record := make(map[string]interface{})
-		networks := db.Networks(maxminddb.SkipAliasedNetworks)
-		for networks.Next() {
-			subnet, err := networks.Network(&record)
-			if err != nil {
+		for result := range db.Networks() {
+			record := make(map[string]interface{})
+			if err := result.Decode(&record); err != nil {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
+			subnet := result.Prefix()
 
 			recordStr := mapInterfaceToStr(record)
 			if !hdrWritten {
@@ -147,24 +146,15 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 		if err := wr.Error(); err != nil {
 			return fmt.Errorf("writer had failure: %w", err)
 		}
-		if err := networks.Err(); err != nil {
-			return fmt.Errorf("failed networks traversal: %w", err)
-		}
 	} else if f.Format == "json" {
-		networks := db.Networks(maxminddb.SkipAliasedNetworks)
 		enc := json.NewEncoder(outFile)
-		for networks.Next() {
+		for result := range db.Networks() {
 			record := make(map[string]interface{})
-
-			subnet, err := networks.Network(&record)
-			if err != nil {
+			if err := result.Decode(&record); err != nil {
 				return fmt.Errorf("failed to get record for next subnet: %w", err)
 			}
-			record["range"] = subnet.String()
+			record["range"] = result.Prefix().String()
 			enc.Encode(record)
-		}
-		if err := networks.Err(); err != nil {
-			return fmt.Errorf("failed networks traversal: %w", err)
 		}
 	}
 	return nil
