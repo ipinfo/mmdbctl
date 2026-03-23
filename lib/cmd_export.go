@@ -1,8 +1,6 @@
 package lib
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -78,7 +76,7 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 		defer outFile.Close()
 	}
 
-	// validate format.
+	// infer format from extension if not specified.
 	if f.Format == "" {
 		if strings.HasSuffix(f.Out, ".csv") {
 			f.Format = "csv"
@@ -90,9 +88,6 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 			f.Format = "csv"
 		}
 	}
-	if f.Format != "csv" && f.Format != "tsv" && f.Format != "json" {
-		return errors.New("format must be \"csv\" or \"tsv\" or \"json\"")
-	}
 
 	// open tree.
 	db, err := maxminddb.Open(args[0])
@@ -101,61 +96,17 @@ func CmdExport(f CmdExportFlags, args []string, printHelp func()) error {
 	}
 	defer db.Close()
 
-	if f.Format == "tsv" || f.Format == "csv" {
-		// export.
-		hdrWritten := false
-		var wr writer
-		if f.Format == "csv" {
-			csvwr := csv.NewWriter(outFile)
-			wr = csvwr
-		} else {
-			tsvwr := NewTsvWriter(outFile)
-			wr = tsvwr
-		}
-		for result := range db.Networks() {
-			record := make(map[string]interface{})
-			if err := result.Decode(&record); err != nil {
-				return fmt.Errorf("failed to get record for next subnet: %w", err)
-			}
-			subnet := result.Prefix()
-
-			recordStr := mapInterfaceToStr(record)
-			if !hdrWritten {
-				hdrWritten = true
-
-				if !f.NoHdr {
-					hdr := append([]string{"range"}, sortedMapKeys(recordStr)...)
-					if err := wr.Write(hdr); err != nil {
-						return fmt.Errorf(
-							"failed to write header %v: %w",
-							hdr, err,
-						)
-					}
-				}
-			}
-
-			line := append(
-				[]string{subnet.String()},
-				sortedMapValsByKeys(recordStr)...,
-			)
-			if err := wr.Write(line); err != nil {
-				return fmt.Errorf("failed to write line %v: %w", line, err)
-			}
-		}
-		wr.Flush()
-		if err := wr.Error(); err != nil {
-			return fmt.Errorf("writer had failure: %w", err)
-		}
-	} else if f.Format == "json" {
-		enc := json.NewEncoder(outFile)
-		for result := range db.Networks() {
-			record := make(map[string]interface{})
-			if err := result.Decode(&record); err != nil {
-				return fmt.Errorf("failed to get record for next subnet: %w", err)
-			}
-			record["range"] = result.Prefix().String()
-			enc.Encode(record)
-		}
+	var exp exporter
+	switch f.Format {
+	case "csv":
+		exp = newCSVExporter(outFile, f.NoHdr)
+	case "tsv":
+		exp = newTSVExporter(outFile, f.NoHdr)
+	case "json":
+		exp = newJSONExporter(outFile)
+	default:
+		return errors.New("format must be \"csv\" or \"tsv\" or \"json\"")
 	}
-	return nil
+
+	return exportNetworks(db, exp)
 }

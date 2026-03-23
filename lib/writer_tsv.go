@@ -1,29 +1,36 @@
 package lib
 
 import (
-	"fmt"
+	"bufio"
 	"io"
 	"strings"
 )
 
 type TsvWriter struct {
-	w io.Writer
+	bw  *bufio.Writer
+	err error
 }
 
 func NewTsvWriter(w io.Writer) *TsvWriter {
 	return &TsvWriter{
-		w: w,
+		bw: bufio.NewWriter(w),
 	}
 }
 
 func (w *TsvWriter) Write(record []string) error {
-	_, err := fmt.Fprintln(w.w, strings.Join(record, "\t"))
-	return err
+	_, err := w.bw.WriteString(strings.Join(record, "\t"))
+	if err != nil {
+		return err
+	}
+	return w.bw.WriteByte('\n')
 }
 
 func (w *TsvWriter) Flush() {
+	if err := w.bw.Flush(); err != nil {
+		w.err = err
+	}
 }
 
 func (w *TsvWriter) Error() error {
-	return nil
+	return w.err
 }
