@@ -7,7 +7,8 @@ import (
 )
 
 type TsvWriter struct {
-	bw *bufio.Writer
+	bw  *bufio.Writer
+	err error
 }
 
 func NewTsvWriter(w io.Writer) *TsvWriter {
@@ -25,9 +26,11 @@ func (w *TsvWriter) Write(record []string) error {
 }
 
 func (w *TsvWriter) Flush() {
-	w.bw.Flush()
+	if err := w.bw.Flush(); err != nil {
+		w.err = err
+	}
 }
 
 func (w *TsvWriter) Error() error {
-	return nil
+	return w.err
 }
