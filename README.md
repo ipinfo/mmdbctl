@@ -19,20 +19,20 @@ The `mmdbctl` CLI is available for download via multiple mechanisms.
 Install the latest `amd64` version:
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/macos.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/macos.sh | sh
 ```
 
 ### Debian / Ubuntu (amd64)
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/deb.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/deb.sh | sh
 ```
 
 OR
 
 ```bash
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/mmdbctl_1.4.8.deb
-sudo dpkg -i mmdbctl_1.4.8.deb
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/mmdbctl_1.4.9.deb
+sudo dpkg -i mmdbctl_1.4.9.deb
 ```
 
 ### Windows Powershell
@@ -40,7 +40,7 @@ sudo dpkg -i mmdbctl_1.4.8.deb
 _Note_: run powershell as administrator before executing this command.
 
 ```bash
-iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/windows.ps1 | iex
+iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/windows.ps1 | iex
 ```
 
 ### Using `go install`
@@ -91,11 +91,11 @@ After choosing a platform `PLAT` from above, run:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/mmdbctl_1.4.8_${PLAT}.tar.gz
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/mmdbctl_1.4.9_${PLAT}.tar.gz
 # OR
-wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.8/mmdbctl_1.4.8_${PLAT}.tar.gz
-tar -xvf mmdbctl_1.4.8_${PLAT}.tar.gz
-mv mmdbctl_1.4.8_${PLAT} /usr/local/bin/mmdbctl
+wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.9/mmdbctl_1.4.9_${PLAT}.tar.gz
+tar -xvf mmdbctl_1.4.9_${PLAT}.tar.gz
+mv mmdbctl_1.4.9_${PLAT} /usr/local/bin/mmdbctl
 ```
 
 ### Using `git`

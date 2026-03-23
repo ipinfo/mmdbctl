@@ -1,3 +1,9 @@
+# 1.4.9
+
+- added tests for `import` and `export` commands
+- [#47 go: upgrade to maxminddb-golang/v2](https://github.com/ipinfo/mmdbctl/pull/47)
+- [#48 export: cache serialized values](https://github.com/ipinfo/mmdbctl/pull/48)
+
 # 1.4.8
 
 - [#41 cmd/metadata: do not show size for node count](https://github.com/ipinfo/mmdbctl/pull/41)
