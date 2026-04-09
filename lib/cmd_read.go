@@ -113,6 +113,7 @@ func CmdRead(f CmdReadFlags, args []string, printHelp func()) error {
 			}
 			continue
 		}
+		addr = addr.Unmap()
 		if err := db.Lookup(addr).Decode(&record); err != nil || len(record) == 0 {
 			if !requiresHdr {
 				fmt.Fprintf(os.Stderr,
