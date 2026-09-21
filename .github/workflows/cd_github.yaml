@@ -21,29 +21,10 @@ jobs:
     - name: Setup GO
       uses: actions/setup-go@v5
       with:
-        go-version: '1.24'
+        go-version-file: go.mod
 
-    - name: Extract CLI Name and Version
-      run: |
-        # Get the tag name from the event payload
-        TAG_NAME=${{ github.ref_name }}
-
-        # Use a regular expression to extract the CLI name and version
-        if [[ $TAG_NAME =~ ^([^-]+)-([^-]+)$ ]]; then
-          CLI_NAME="${BASH_REMATCH[1]}"
-          CLI_VERSION="${BASH_REMATCH[2]}"
-
-          echo "CLI Name: $CLI_NAME"
-          echo "CLI Version: $CLI_VERSION"
-
-          # Add to github env
-          echo "CLI_NAME=$CLI_NAME" >> $GITHUB_ENV
-          echo "CLI_VERSION=$CLI_VERSION" >> $GITHUB_ENV
-        else
-          echo "Invalid tag format: $TAG_NAME"
-          echo "Tag should be of format CLI-VSN. e.g. mmdbctl-1.0.0"
-          exit 1
-        fi
+    - name: Extract version from tag
+      run: echo "CLI_VERSION=${GITHUB_REF_NAME#mmdbctl-}" >> "$GITHUB_ENV"
 
     - name: Build
       run: ./scripts/build-archive-all.sh ${{ env.CLI_VERSION }}
@@ -56,9 +37,11 @@ jobs:
       with:
         body_path: changes.md
         files: |
-          ./build/${{ env.CLI_NAME }}_${{ env.CLI_VERSION }}*.tar.gz
-          ./build/${{ env.CLI_NAME }}_${{ env.CLI_VERSION }}*.zip
-          ./build/${{ env.CLI_NAME }}_${{ env.CLI_VERSION }}*.deb
+          ./build/mmdbctl_${{ env.CLI_VERSION }}*.tar.gz
+          ./build/mmdbctl_${{ env.CLI_VERSION }}*.zip
+          ./build/mmdbctl_${{ env.CLI_VERSION }}*.deb
+          ./build/mmdbshrink_${{ env.CLI_VERSION }}*.tar.gz
+          ./build/mmdbshrink_${{ env.CLI_VERSION }}*.zip
           ./macos.sh
           ./windows.ps1
           ./deb.sh

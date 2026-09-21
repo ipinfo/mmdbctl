@@ -9,15 +9,20 @@ the following features:
 - See the difference between two MMDB files.
 - Print the metadata of an MMDB file.
 - Check that an MMDB file is not corrupted or invalid.
+- Losslessly shrink an MMDB file.
 
 ## Installation
 
 The `mmdbctl` CLI is available for download via multiple mechanisms.
 
+Releases also ship `mmdbshrink`, a standalone binary that does what
+`mmdbctl shrink` does (see [Shrinking](#shrinking)). The
+install scripts and the Debian package below install both binaries.
+
 ### macOS
 
 Install the latest version. The script detects your Mac's architecture and
-installs the matching binary: `arm64` on Apple Silicon, including when run
+installs the matching binaries: `arm64` on Apple Silicon, including when run
 under Rosetta, and `amd64` on Intel:
 
 ```bash
@@ -52,6 +57,9 @@ installed:
 
 ```bash
 go install github.com/ipinfo/mmdbctl@latest
+
+# optionally, the standalone mmdbshrink binary
+go install github.com/ipinfo/mmdbctl/mmdbshrink@latest
 ```
 
 ### Using `curl`/`wget`
@@ -87,6 +95,7 @@ solaris_amd64
 windows_386
 windows_amd64
 windows_arm
+windows_arm64
 ```
 
 After choosing a platform `PLAT` from above, run:
@@ -100,6 +109,16 @@ tar -xvf mmdbctl_1.4.10_${PLAT}.tar.gz
 mv mmdbctl_1.4.10_${PLAT} /usr/local/bin/mmdbctl
 ```
 
+The standalone `mmdbshrink` binary is published in the same release, for the
+same platforms:
+
+```bash
+# for Windows, use ".zip" instead of ".tar.gz"
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/mmdbshrink_1.4.10_${PLAT}.tar.gz
+tar -xvf mmdbshrink_1.4.10_${PLAT}.tar.gz
+mv mmdbshrink_1.4.10_${PLAT} /usr/local/bin/mmdbshrink
+```
+
 ### Using `git`
 
 Installing from source requires at least the Golang version specified in
@@ -107,28 +126,31 @@ Installing from source requires at least the Golang version specified in
 [the official site](https://golang.org/doc/install).
 
 Once the correct Golang version is installed, simply clone the repository and
-install the binary:
+install the binaries:
 
 ```bash
 git clone https://github.com/ipinfo/mmdbctl
 cd mmdbctl
-go install .
+go install . ./mmdbshrink
 $GOPATH/bin/mmdbctl
+$GOPATH/bin/mmdbshrink
 ```
 
-You can add `$GOPATH/bin` to your `$PATH` to access `mmdbctl` directly from
-anywhere.
+You can add `$GOPATH/bin` to your `$PATH` to access `mmdbctl` and `mmdbshrink`
+directly from anywhere.
 
-Alternatively, you can do the following to output the binary somewhere
+Alternatively, you can do the following to output the binaries somewhere
 specific:
 
 ```bash
 git clone https://github.com/ipinfo/mmdbctl
 cd mmdbctl
-go build -o <path> .
+go build -o <dir>/ . ./mmdbshrink
 ```
 
-Replace `<path>` with the required location.
+Replace `<dir>` with the required directory; both binaries are written into
+it. `./scripts/build.sh` does the same into `build/`. Run the tests with
+`go test ./...`.
 
 ## Quick Start
 
@@ -136,9 +158,74 @@ This will help you quickly get started with the `mmdbctl` CLI.
 
 ### Default Help Message
 
-By default, invoking the CLI shows a help message:
+By default, invoking one of the CLIs shows a help message:
 
-![mmdbctl](images/help.png)
+```
+$ mmdbctl
+Usage: mmdbctl <cmd> [<opts>] [<args>]
+
+Commands:
+  read        read data for IPs in an mmdb file.
+  import      import data in non-mmdb format into mmdb.
+  export      export data from mmdb format into non-mmdb format.
+  diff        see the difference between two mmdb files.
+  metadata    print metadata from the mmdb file.
+  verify      check that the mmdb file is not corrupted or invalid.
+  shrink      losslessly shrink an mmdb file.
+  completion  install or output shell auto-completion script.
+
+Options:
+  General:
+    --nocolor
+      disable colored output.
+    --help, -h
+      show help.
+
+$ mmdbshrink
+Usage: mmdbshrink [<opts>] <input_mmdb_file> [<output_mmdb_file>]
+
+Description:
+  Losslessly shrink an mmdb file by deduplicating identical subtrees of the
+  search trie. The output is a standard mmdb file with identical lookup
+  semantics that any reader can open as is. The input file is left untouched.
+
+  Without <output_mmdb_file>, the output is written next to the input with a
+  .shrunk.mmdb extension: foo.mmdb becomes foo.shrunk.mmdb.
+
+  After shrinking, the output is validated against the input: metadata, IPv4
+  class and private/reserved boundaries, and 1,000,000 random addresses per
+  address family must all answer identically. If any lookup differs the
+  command fails, and the output must not be used.
+
+Options:
+  General:
+    --help, -h
+      show help.
+    --verbose, -v
+      log phase boundaries, memory snapshots and progress counts to stderr.
+      default: false.
+
+  Input/Output:
+    --overwrite, -o
+      overwrite the output file if it already exists.
+      default: false.
+    --dry-run
+      run the full shrink and report the savings, but discard the output
+      instead of writing it. Nothing is validated.
+      default: false.
+
+  Report:
+    --full-report
+      also measure how much memory a reader holds for the input and the
+      output, each in a fresh child process.
+      default: false.
+
+  Shrinking:
+    --no-compact
+      skip data-section compaction and copy the data section verbatim.
+      debug only.
+      default: false.
+```
 
 ### Reading
 
@@ -321,6 +408,140 @@ $ mmdbctl verify location-tmp.mmdb
 invalid: received decoding error (the MaxMind DB file's data section contains bad data (uint16 size of 11)) at offset of 13825601
 ```
 
+### Shrinking
+
+`mmdbctl shrink` losslessly shrinks MMDB files by deduplicating identical
+subtrees of the search tree. The output is a standard MMDB file that returns
+identical lookup results and that any MMDB reader can open as is, including
+`mmdbctl read`: there is nothing to decompress before reading it.
+
+The standalone `mmdbshrink` binary does the same: `mmdbshrink <in>` is
+`mmdbctl shrink <in>`. The one difference is exit codes: `mmdbshrink` exits
+non-zero when validation fails, so it can gate a CI pipeline, while
+`mmdbctl shrink` prints the error and exits 0 like every other `mmdbctl`
+command. See [`mmdbshrink`](mmdbshrink/README.md) for full details.
+
+Shrink a file. Without an output path, `foo.mmdb` is shrunk to
+`foo.shrunk.mmdb`; the input is left untouched. After writing, the shrunk
+file is validated against the input: the metadata, the IPv4 class and
+private/reserved boundaries, and 1,000,000 random addresses per address
+family must all answer identically:
+
+```bash
+$ mmdbctl shrink ipinfo_core.mmdb
+
+input:   ipinfo_core.mmdb
+output:  ipinfo_core.shrunk.mmdb
+
+  size:   1.51 GB      ->  717.89 MB   (saved 791.08 MB, -52.43%)
+  nodes:  169,017,278  ->  70,132,748  (-58.51%)
+  tree:   1.35 GB      ->  561.06 MB
+  data:   156.82 MB    ->  156.82 MB   (unchanged)
+
+elapsed: 25.399s
+
+validation (seed 1):
+  [OK] metadata        ip_version=6  record_size=32  binary_format=2.0
+                       database_type: ipinfo bundle_location_core.mmdb  build_epoch=1789632260
+                       node_count: 169,017,278 -> 70,132,748 (-58.51%)
+  [OK] fixed probes    n=39  hits=7  (1ms)
+  [OK] random IPv4     n=1,000,000  hits=861,882 (86.19%)  mismatches=0  (7.471s)
+  [OK] random IPv6     n=1,000,000  hits=1,985 (0.20%)  mismatches=0  (131ms)
+
+bench (1,000,000 lookups each):
+  input:    size=1.51 GB     per_op=2496ns  qps=400,492
+  output:   size=717.89 MB   per_op=2460ns  qps=406,466
+```
+
+Pass an output path to choose another name, and `--overwrite` to replace a
+file that already exists. `--full-report` also measures how much memory a
+reader holds for the input and the shrunk file, each in a fresh process:
+
+```bash
+$ mmdbctl shrink --full-report ipinfo_core.mmdb
+...
+memory (200,000 lookups each, separate processes):
+  input:    mmap_cached=910.41 MiB  proc_rss=839.86 MiB  per_op=8600ns  minflt=247  majflt=28,250
+  output:   mmap_cached=461.92 MiB  proc_rss=463.16 MiB  per_op=4666ns  minflt=238  majflt=10,227
+```
+
+To see how much a file would shrink without writing anything, use
+`--dry-run`. It runs the full shrink and discards the output, so the numbers
+are exact. Nothing is written, so nothing is validated.
+
+The result is a regular MMDB file:
+
+```bash
+$ mmdbctl read 8.8.8.8 ipinfo_core.shrunk.mmdb
+{"as_domain":"google.com","as_name":"Google LLC","as_type":"hosting","asn":"AS15169","city":"Mountain View","continent":"North America","continent_code":"NA","country":"United States","country_code":"US","ip":"8.8.8.8","is_anonymous":false,"is_anycast":true,"is_hosting":true,"is_mobile":false,"is_satellite":false,"latitude":38.00881,"longitude":-122.11746,"postal_code":"94043","region":"California","region_code":"CA","timezone":"America/Los_Angeles"}
+```
+
+## Go Library
+
+The shrinking tooling is also available as Go packages under
+`github.com/ipinfo/mmdbctl/mmdbshrink/lib`. `shrink` and `verify` are the code
+the CLIs run, and `verify` and `bench` also offer checks the CLIs don't run on
+every shrink: a walk of every prefix in both files, the strongest and slowest
+equivalence check, and a noise-robust benchmark that compares lookup speed
+over many interleaved rounds.
+
+| Package      | Entry point                                          |
+| ------------ | ---------------------------------------------------- |
+| `lib/shrink` | `shrink.Shrink(logger, inputPath, outputPath, opts)` |
+| `lib/verify` | `verify.Verify(logger, basePath, shrunkPath, opts)`  |
+| `lib/bench`  | `bench.Paired(logger, pairs, opts)`                  |
+| `lib/bench`  | `bench.Memory(logger, path, opts)`                   |
+
+Every entry point takes a `*slog.Logger` and an options struct, and returns a
+result struct and an error. Progress goes to the logger at Debug level, so
+pass a logger with that level enabled to see it, or `nil` to discard it.
+Start from a package's `DefaultOptions()` where one exists: the zero value is
+valid but does not always match the CLI defaults. Nothing in `lib` prints,
+reads flags or exits the process.
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"log/slog"
+	"os"
+
+	"github.com/ipinfo/mmdbctl/mmdbshrink/lib/shrink"
+	"github.com/ipinfo/mmdbctl/mmdbshrink/lib/verify"
+)
+
+func main() {
+	// Progress is logged at Debug level; a nil logger discards it.
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	res, err := shrink.Shrink(logger, "ipinfo_core.mmdb", "ipinfo_core.shrunk.mmdb", shrink.Options{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%d -> %d bytes, %d -> %d nodes\n",
+		res.InputBytes, res.OutputBytes, res.InputNodeCount, res.OutputNodeCount)
+
+	opts := verify.DefaultOptions()
+	opts.Enumerate = false // skip the slow full prefix walk
+	opts.Bench = false
+	report, err := verify.Verify(nil, "ipinfo_core.mmdb", "ipinfo_core.shrunk.mmdb", opts)
+	if err != nil {
+		var check *verify.CheckError
+		if errors.As(err, &check) {
+			log.Fatalf("%s check failed: %s", check.Check, check.Detail)
+		}
+		log.Fatal(err)
+	}
+	fmt.Printf("%d random IPv4 lookups matched\n", report.RandomIPv4.N)
+}
+```
+
+`verify.Verify` stops at the first failed check and returns it as a
+`*verify.CheckError`, alongside a report of the checks that passed before it.
+
 ## Auto-Completion
 
 Auto-completion is supported for at least the following shells:
@@ -341,6 +562,12 @@ Installing auto-completions is as simple as running one command (works for
 
 ```bash
 mmdbctl completion install
+```
+
+The standalone `mmdbshrink` binary has the same command:
+
+```bash
+mmdbshrink completion install
 ```
 
 If you want to customize the installation process (e.g. in case the

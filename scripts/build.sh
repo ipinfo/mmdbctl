@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Build binary for mmdbctl.
+# Build binaries for mmdbctl and mmdbshrink.
 
 DIR=`dirname $0`
 ROOT=$DIR/..
 
 go build                                                                \
     -o $ROOT/build/                                                     \
-    $ROOT/
+    $ROOT/                                                              \
+    $ROOT/mmdbshrink

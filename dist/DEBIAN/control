@@ -9,3 +9,4 @@ Homepage: https://ipinfo.io
 Package: mmdbctl
 Architecture: amd64
 Description: mmdbctl is an MMDB file management CLI by IPinfo.
+ Also installs mmdbshrink, the MMDB shrinking toolbox.

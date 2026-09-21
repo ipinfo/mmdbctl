@@ -1,34 +1,39 @@
 $VSN = "1.4.10"
 
-# build the filename for the Zip archive and exe file
-$FileName = "mmdbctl_$($VSN)_windows_amd64"
-$ZipFileName = "$($FileName).zip"
+# both binaries are installed side by side in the same directory
+$InstallDir = "$env:LOCALAPPDATA\mmdbctl"
 
-# download and extract zip
-Invoke-WebRequest -Uri "https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-$VSN/$FileName.zip" -OutFile ./$ZipFileName
-Unblock-File ./$ZipFileName
-Expand-Archive -Path ./$ZipFileName  -DestinationPath $env:LOCALAPPDATA\mmdbctl -Force
+foreach ($Bin in "mmdbctl", "mmdbshrink") {
+  # build the filename for the Zip archive and exe file
+  $FileName = "$($Bin)_$($VSN)_windows_amd64"
+  $ZipFileName = "$($FileName).zip"
 
-# delete if already exists
-if (Test-Path "$env:LOCALAPPDATA\mmdbctl\mmdbctl.exe") {
-  Remove-Item "$env:LOCALAPPDATA\mmdbctl\mmdbctl.exe"
+  # download and extract zip
+  Invoke-WebRequest -Uri "https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-$VSN/$FileName.zip" -OutFile ./$ZipFileName
+  Unblock-File ./$ZipFileName
+  Expand-Archive -Path ./$ZipFileName  -DestinationPath $InstallDir -Force
+
+  # delete if already exists
+  if (Test-Path "$InstallDir\$Bin.exe") {
+    Remove-Item "$InstallDir\$Bin.exe"
+  }
+  Rename-Item -Path "$InstallDir\$FileName.exe" -NewName "$Bin.exe"
+
+  # cleaning files
+  Remove-Item -Path ./$ZipFileName
 }
-Rename-Item -Path "$env:LOCALAPPDATA\mmdbctl\$FileName.exe" -NewName "mmdbctl.exe"
 
-# setting up env. 
+# setting up env.
 $PathContent = [Environment]::GetEnvironmentVariable('path', 'Machine')
-$mmdbctlPath = "$env:LOCALAPPDATA\mmdbctl"
 
 # if Path already exists
 if ($PathContent -ne $null) {
-  if (-Not($PathContent -split ';' -contains $mmdbctlPath)) {
-    [System.Environment]::SetEnvironmentVariable("PATH", $Env:Path + ";$env:LOCALAPPDATA\mmdbctl", "Machine")
+  if (-Not($PathContent -split ';' -contains $InstallDir)) {
+    [System.Environment]::SetEnvironmentVariable("PATH", $Env:Path + ";$InstallDir", "Machine")
   }
 }
 else {
-  [System.Environment]::SetEnvironmentVariable("PATH", $Env:Path + ";$env:LOCALAPPDATA\mmdbctl", "Machine")
+  [System.Environment]::SetEnvironmentVariable("PATH", $Env:Path + ";$InstallDir", "Machine")
 }
 
-# cleaning files
-Remove-Item -Path ./$ZipFileName
-"You can use mmdbctl now."
+"You can use mmdbctl and mmdbshrink now."

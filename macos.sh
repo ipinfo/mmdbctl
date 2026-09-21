@@ -14,13 +14,15 @@ case "$(uname -m)" in
     *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
 
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-${VSN}/mmdbctl_${VSN}_${PLAT}.tar.gz
-tar -xf mmdbctl_${VSN}_${PLAT}.tar.gz
-rm mmdbctl_${VSN}_${PLAT}.tar.gz
-mv mmdbctl_${VSN}_${PLAT} /usr/local/bin/mmdbctl
+for BIN in mmdbctl mmdbshrink; do
+    curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-${VSN}/${BIN}_${VSN}_${PLAT}.tar.gz
+    tar -xf ${BIN}_${VSN}_${PLAT}.tar.gz
+    rm ${BIN}_${VSN}_${PLAT}.tar.gz
+    mv ${BIN}_${VSN}_${PLAT} /usr/local/bin/${BIN}
+done
 
 echo
-echo 'You can now run `mmdbctl`'.
+echo 'You can now run `mmdbctl` and `mmdbshrink`'.
 
 if [ -f "$0" ]; then
     rm $0

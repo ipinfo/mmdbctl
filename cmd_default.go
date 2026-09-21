@@ -18,7 +18,7 @@ Commands:
   diff        see the difference between two mmdb files.
   metadata    print metadata from the mmdb file.
   verify      check that the mmdb file is not corrupted or invalid.
-  zip         losslessly compress an mmdb file, and related tooling.
+  shrink      losslessly shrink an mmdb file.
   completion  install or output shell auto-completion script.
 
 Options:

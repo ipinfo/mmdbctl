@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build binary for all platforms for version $1.
+# Build mmdbctl and mmdbshrink binaries for all platforms for version $1.
 
 set -e
 
@@ -37,21 +37,32 @@ for t in                                                                      \
     solaris_amd64                                                             \
     windows_386                                                               \
     windows_amd64                                                             \
-    windows_arm ;
+    windows_arm                                                               \
+    windows_arm64 ;
 do
     os="${t%_*}"
     arch="${t#*_}"
-    output="mmdbctl_${VSN}_${os}_${arch}"
 
-    if [ "$os" == "windows" ] ; then
-        output+=".exe"
-    fi
+    # mmdbctl is the module's root package; every other binary is the
+    # package in the directory of the same name.
+    for bin in mmdbctl mmdbshrink ; do
+        if [ "$bin" == "mmdbctl" ] ; then
+            pkg=$ROOT
+        else
+            pkg=$ROOT/$bin
+        fi
 
-    echo "building ${output}"
-    GOOS=$os GOARCH=$arch go build                                            \
-        -o $ROOT/build/${output}                                              \
-        $ROOT
-        
+        output="${bin}_${VSN}_${os}_${arch}"
+
+        if [ "$os" == "windows" ] ; then
+            output+=".exe"
+        fi
+
+        echo "building ${output}"
+        GOOS=$os GOARCH=$arch go build                                        \
+            -o $ROOT/build/${output}                                          \
+            $pkg
+    done
 done
 
 wait

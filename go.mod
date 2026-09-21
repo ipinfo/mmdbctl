@@ -1,14 +1,15 @@
 module github.com/ipinfo/mmdbctl
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/edsrzf/mmap-go v1.1.0
 	github.com/fatih/color v1.16.0
 	github.com/ipinfo/cli v0.0.0-20240814004006-a9ca4b1d939d
 	github.com/maxmind/mmdbwriter v1.0.1-0.20231024181307-469cd9b959b4
-	github.com/oschwald/maxminddb-golang/v2 v2.1.1
+	github.com/oschwald/maxminddb-golang/v2 v2.3.0
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/sys v0.44.0
 )
 
 require (
@@ -20,5 +21,4 @@ require (
 	github.com/posener/script v1.2.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611 // indirect
-	golang.org/x/sys v0.38.0 // indirect
 )

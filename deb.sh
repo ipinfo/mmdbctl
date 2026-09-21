@@ -7,7 +7,7 @@ sudo dpkg -i mmdbctl_${VSN}.deb
 rm mmdbctl_${VSN}.deb
 
 echo
-echo 'You can now run `mmdbctl`'.
+echo 'You can now run `mmdbctl` and `mmdbshrink`'.
 
 if [ -f "$0" ]; then
     rm $0

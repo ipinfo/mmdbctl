@@ -54,6 +54,8 @@ cat $CHANGES CHANGELOG.md > CHANGELOG.md.new
 mv CHANGELOG.md.new CHANGELOG.md
 rm $CHANGES
 
-# Update README with new version
-cat README.md | sed "s/${LATEST_RELEASE_SEMVER}/${VSN}/g" > README.md.new
-mv README.md.new README.md
+# Update READMEs with new version
+for README in README.md mmdbshrink/README.md; do
+    cat $README | sed "s/${LATEST_RELEASE_SEMVER}/${VSN}/g" > $README.new
+    mv $README.new $README
+done
