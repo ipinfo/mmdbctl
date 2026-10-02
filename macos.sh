@@ -5,7 +5,7 @@ VSN=1.4.10
 case "$(uname -m)" in
     arm64) PLAT=darwin_arm64 ;;
     x86_64)
-        if [ "$(sysctl -n hw.optional.arm64) 2>/dev/null" = "1" ]; then
+        if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ]; then
             PLAT=darwin_arm64
         else
             PLAT=darwin_amd64
