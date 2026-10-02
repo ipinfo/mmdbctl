@@ -16,7 +16,9 @@ The `mmdbctl` CLI is available for download via multiple mechanisms.
 
 ### macOS
 
-Install the latest `amd64` version:
+Install the latest version. The script detects your Mac's architecture and
+installs the matching binary: `arm64` on Apple Silicon, including when run
+under Rosetta, and `amd64` on Intel:
 
 ```bash
 curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/macos.sh | sh
