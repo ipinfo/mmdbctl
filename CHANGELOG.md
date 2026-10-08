@@ -1,3 +1,8 @@
+# 1.5.0
+
+- Implement new `mmdbshrink` standalone tool and `mmdbctl shrink` command to shrink MMDB file size
+- Fix Mac OS install script
+
 # 1.4.10
 
 - [#49 read: fix IPv4 lookup on IPv6 databases](https://github.com/ipinfo/mmdbctl/pull/49)

@@ -42,7 +42,7 @@ detects your Mac's architecture and installs the matching binaries: `arm64` on
 Apple Silicon, including when run under Rosetta, and `amd64` on Intel:
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/macos.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.0/macos.sh | sh
 ```
 
 ### Debian / Ubuntu (amd64)
@@ -50,7 +50,7 @@ curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/maco
 Installs both `mmdbctl` and `mmdbshrink`:
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/deb.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.0/deb.sh | sh
 ```
 
 ### Windows Powershell
@@ -58,7 +58,7 @@ curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/deb.
 _Note_: run powershell as administrator before executing this command.
 
 ```bash
-iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/windows.ps1 | iex
+iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.0/windows.ps1 | iex
 ```
 
 ### Using `go install`
@@ -80,9 +80,9 @@ platform `PLAT`, run:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.4.10/mmdbshrink_1.4.10_${PLAT}.tar.gz
-tar -xvf mmdbshrink_1.4.10_${PLAT}.tar.gz
-mv mmdbshrink_1.4.10_${PLAT} /usr/local/bin/mmdbshrink
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.0/mmdbshrink_1.5.0_${PLAT}.tar.gz
+tar -xvf mmdbshrink_1.5.0_${PLAT}.tar.gz
+mv mmdbshrink_1.5.0_${PLAT} /usr/local/bin/mmdbshrink
 ```
 
 ### Using `git`

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VSN=1.4.10
+VSN=1.5.0
 
 case "$(uname -m)" in
     arm64) PLAT=darwin_arm64 ;;

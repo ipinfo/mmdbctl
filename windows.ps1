@@ -1,4 +1,4 @@
-$VSN = "1.4.10"
+$VSN = "1.5.0"
 
 # both binaries are installed side by side in the same directory
 $InstallDir = "$env:LOCALAPPDATA\mmdbctl"
