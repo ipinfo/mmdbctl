@@ -1,3 +1,7 @@
+# 1.5.1
+
+- Build `mmdbctl` and `mmdbshrink` binaries with latest Go version, which fixes CVE-2026-111943
+
 # 1.5.0
 
 - Implement new `mmdbshrink` standalone tool and `mmdbctl shrink` command to shrink MMDB file size
