@@ -2,6 +2,8 @@ module github.com/ipinfo/mmdbctl
 
 go 1.25.0
 
+toolchain go1.27.3
+
 require (
 	github.com/edsrzf/mmap-go v1.1.0
 	github.com/fatih/color v1.16.0
