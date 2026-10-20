@@ -1,6 +1,7 @@
 # 1.5.1
 
-- Build `mmdbctl` and `mmdbshrink` binaries with latest Go version, which fixes CVE-2026-111943
+- Build `mmdbctl` and `mmdbshrink` binaries with Go 1.27.3, which fixes CVE-2026-111943
+- Drop 32-bit Windows ARM builds
 
 # 1.5.0
 
