@@ -270,11 +270,14 @@ func traverseDataSection(mmdbFile string, startOffset int64, endOffset int64) (T
 
 // This is used for further calculation on the current payload size if it is either 29, 30 or 31.
 func payloadCalculation(mmdbFile io.Reader, payloadSize int, offset int64) (int, int64, error) {
+	// The size prefixes are read with io.ReadFull: a plain Read may return
+	// fewer bytes than requested without reporting an error, which would
+	// leave the tail of the prefix as zeros and compute a wrong payload
+	// size while advancing the offset past the bytes actually consumed.
 	if payloadSize == 29 {
 		// Read the next byte as the payload size.
 		var nextByte [1]byte
-		_, err := mmdbFile.Read(nextByte[:])
-		if err != nil {
+		if _, err := io.ReadFull(mmdbFile, nextByte[:]); err != nil {
 			return -1, -1, err
 		}
 		payloadSize = int(nextByte[0]) + 29
@@ -282,8 +285,7 @@ func payloadCalculation(mmdbFile io.Reader, payloadSize int, offset int64) (int,
 	} else if payloadSize == 30 {
 		// Read the next two bytes as the payload size.
 		var nextBytes [2]byte
-		_, err := mmdbFile.Read(nextBytes[:])
-		if err != nil {
+		if _, err := io.ReadFull(mmdbFile, nextBytes[:]); err != nil {
 			return -1, -1, err
 		}
 		payloadSize = int(nextBytes[0])<<8 + int(nextBytes[1]) + 285
@@ -291,8 +293,7 @@ func payloadCalculation(mmdbFile io.Reader, payloadSize int, offset int64) (int,
 	} else if payloadSize == 31 {
 		// Read the next three bytes as the payload size.
 		var nextBytes [3]byte
-		_, err := mmdbFile.Read(nextBytes[:])
-		if err != nil {
+		if _, err := io.ReadFull(mmdbFile, nextBytes[:]); err != nil {
 			return -1, -1, err
 		}
 		payloadSize = int(nextBytes[0])<<16 + int(nextBytes[1])<<8 + int(nextBytes[2]) + 65821
