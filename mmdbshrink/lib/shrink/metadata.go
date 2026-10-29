@@ -71,7 +71,23 @@ type decoder struct {
 	off int
 }
 
+// maxDecodeDepth bounds how deeply the decoder will nest. Pointers can
+// target any offset in the buffer, including an earlier one, so a
+// self-referential or mutually-referential structure would otherwise recurse
+// until the stack overflows. The limit matches the one the upstream maxminddb
+// reader uses.
+const maxDecodeDepth = 512
+
 func (d *decoder) readValue() (any, error) {
+	return d.readValueAt(0)
+}
+
+// readValueAt decodes the value at the current offset, refusing to nest
+// deeper than maxDecodeDepth.
+func (d *decoder) readValueAt(depth int) (any, error) {
+	if depth > maxDecodeDepth {
+		return nil, errors.New("decoder: maximum nesting depth exceeded")
+	}
 	if d.off >= len(d.buf) {
 		return nil, errors.New("decoder: unexpected EOF")
 	}
@@ -106,7 +122,7 @@ func (d *decoder) readValue() (any, error) {
 			return nil, fmt.Errorf("decoder: pointer @%d targets another pointer", target)
 		}
 		sub := &decoder{buf: d.buf, off: int(target)}
-		return sub.readValue()
+		return sub.readValueAt(depth + 1)
 	case 2, 4: // utf8 string, bytes
 		n, err := d.readSize(size)
 		if err != nil {
@@ -140,7 +156,7 @@ func (d *decoder) readValue() (any, error) {
 		}
 		m := make(map[string]any, n)
 		for i := 0; i < n; i++ {
-			kv, err := d.readValue()
+			kv, err := d.readValueAt(depth + 1)
 			if err != nil {
 				return nil, fmt.Errorf("map key %d: %w", i, err)
 			}
@@ -148,7 +164,7 @@ func (d *decoder) readValue() (any, error) {
 			if !ok {
 				return nil, fmt.Errorf("map key %d not a string (%T)", i, kv)
 			}
-			vv, err := d.readValue()
+			vv, err := d.readValueAt(depth + 1)
 			if err != nil {
 				return nil, fmt.Errorf("map value for %q: %w", ks, err)
 			}
@@ -168,7 +184,7 @@ func (d *decoder) readValue() (any, error) {
 		}
 		a := make([]any, n)
 		for i := 0; i < n; i++ {
-			v, err := d.readValue()
+			v, err := d.readValueAt(depth + 1)
 			if err != nil {
 				return nil, fmt.Errorf("array elem %d: %w", i, err)
 			}
