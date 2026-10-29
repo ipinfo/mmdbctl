@@ -375,7 +375,12 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 				}
 				break
 			}
-			mResult := row.(map[string]interface{})
+			mResult, ok := row.(map[string]interface{})
+			if !ok {
+				return errors.New(
+					"couldn't get ip or range from the record",
+				)
+			}
 
 			if !fieldsResolved {
 				fieldsResolved = true
@@ -385,7 +390,13 @@ func CmdImport(f CmdImportFlags, args []string, printHelp func()) error {
 			// convert 2 IPs into IP range?
 			var networkStr string
 			if val, ok := mResult["start_ip"].(string); ok {
-				networkStr = val + "-" + mResult["end_ip"].(string)
+				endVal, ok := mResult["end_ip"].(string)
+				if !ok {
+					return errors.New(
+						"couldn't get ip or range from the record",
+					)
+				}
+				networkStr = val + "-" + endVal
 				delete(mResult, "start_ip")
 				delete(mResult, "end_ip")
 				if _, ok := mResult["join_key"].(string); ok {
