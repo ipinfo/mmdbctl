@@ -226,11 +226,16 @@ func schemaKindName(kind mmdbdata.Kind) string {
 	}
 }
 
-// metadataEquivalent compares every metadata field except node_count, which
-// is expected to differ: shrinking it is the whole point.
+// metadataEquivalent compares every metadata field except node_count and
+// record_size, which may decrease when the rewritten tree fits a narrower width.
 func metadataEquivalent(a, b maxminddb.Metadata) (bool, string) {
+	if b.RecordSize > a.RecordSize {
+		return false, fmt.Sprintf("record_size differs: %d -> %d (output must not be wider)", a.RecordSize, b.RecordSize)
+	}
 	a.NodeCount = 0
 	b.NodeCount = 0
+	a.RecordSize = 0
+	b.RecordSize = 0
 	// A nil and an empty collection are the same thing in the file, so don't
 	// let DeepEqual report "[] vs []".
 	for _, m := range []*maxminddb.Metadata{&a, &b} {
@@ -252,7 +257,7 @@ func metadataEquivalent(a, b maxminddb.Metadata) (bool, string) {
 		field := t.Field(i)
 		// Interface() panics on an unexported field. DeepEqual above still
 		// covered it, so a difference there ends in the generic message.
-		if field.Name == "NodeCount" || !field.IsExported() {
+		if field.Name == "NodeCount" || field.Name == "RecordSize" || !field.IsExported() {
 			continue
 		}
 		left := av.Field(i).Interface()

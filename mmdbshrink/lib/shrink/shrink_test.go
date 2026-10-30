@@ -43,6 +43,15 @@ func TestShrinkLookupEquivalence(t *testing.T) {
 					t.Errorf("expected smaller output: %d -> %d bytes", res.InputBytes, res.OutputBytes)
 				}
 
+				shrunk, err := maxminddb.Open(out)
+				if err != nil {
+					t.Fatalf("open shrunk output: %v", err)
+				}
+				if shrunk.Metadata.RecordSize != 24 {
+					t.Errorf("record_size = %d, want smallest supported width 24", shrunk.Metadata.RecordSize)
+				}
+				shrunk.Close()
+
 				assertEquivalent(t, in, out)
 
 				// Shrinking the output again must be a fixed point.
@@ -156,12 +165,13 @@ func assertEquivalent(t *testing.T, basePath, otherPath string) {
 		t.Errorf("reader Verify() on shrunk output: %v", err)
 	}
 
-	// Metadata: identical except node_count.
+	// Metadata: identical except node_count and a potentially narrower record_size.
 	bm, om := base.Metadata, other.Metadata
 	if om.NodeCount >= bm.NodeCount {
 		t.Errorf("node_count %d -> %d, expected a decrease", bm.NodeCount, om.NodeCount)
 	}
 	om.NodeCount = bm.NodeCount
+	om.RecordSize = bm.RecordSize
 	if !reflect.DeepEqual(bm, om) {
 		t.Errorf("metadata differs:\n base: %+v\nother: %+v", bm, om)
 	}

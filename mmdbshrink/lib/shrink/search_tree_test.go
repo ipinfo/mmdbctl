@@ -2,6 +2,41 @@ package shrink
 
 import "testing"
 
+func TestSmallestRecordSize(t *testing.T) {
+	tests := []struct {
+		name       string
+		maxValue   uint64
+		recordSize uint64
+	}{
+		{name: "24-bit maximum", maxValue: 0xFFFFFF, recordSize: 24},
+		{name: "above 24-bit maximum", maxValue: 0x1000000, recordSize: 28},
+		{name: "28-bit maximum", maxValue: 0x0FFFFFFF, recordSize: 28},
+		{name: "above 28-bit maximum", maxValue: 0x10000000, recordSize: 32},
+		{name: "32-bit maximum", maxValue: 0xFFFFFFFF, recordSize: 32},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const nodeCount = uint32(1)
+			offset := uint32(tt.maxValue - uint64(nodeCount) - dataSectionSeparatorSize)
+			nodes := canonNodes{{left: pointer{kind: dataKind, id: offset}}}
+			got, err := smallestRecordSize(nodes, nodeCount)
+			if err != nil {
+				t.Fatalf("smallestRecordSize: %v", err)
+			}
+			if got != tt.recordSize {
+				t.Errorf("smallestRecordSize = %d, want %d", got, tt.recordSize)
+			}
+		})
+	}
+}
+
+func TestSmallestRecordSizeRejectsOverflow(t *testing.T) {
+	nodes := canonNodes{{left: pointer{kind: dataKind, id: 0xFFFFFFFF}}}
+	if _, err := smallestRecordSize(nodes, 1); err == nil {
+		t.Fatal("smallestRecordSize accepted a value wider than 32 bits")
+	}
+}
+
 // TestNodePairRoundTrip round-trips writeNodePair -> readNodePair for every
 // supported record_size across boundary values, with particular attention to
 // the 28-bit nibble packing in byte b[3] (the high nibble of left and the low
