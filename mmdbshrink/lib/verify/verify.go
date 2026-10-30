@@ -249,7 +249,7 @@ func Verify(logger *slog.Logger, basePath, shrunkPath string, opts Options) (Rep
 	}
 	report.Metadata = MetadataStage{
 		IPVersion:         a.Metadata.IPVersion,
-		RecordSize:        a.Metadata.RecordSize,
+		RecordSize:        b.Metadata.RecordSize,
 		BinaryFormatMajor: a.Metadata.BinaryFormatMajorVersion,
 		BinaryFormatMinor: a.Metadata.BinaryFormatMinorVersion,
 		DatabaseType:      a.Metadata.DatabaseType,

@@ -14,23 +14,47 @@ func buildSearchTree(nodes canonNodes, recordSize uint64) ([]byte, error) {
 	for i := range nodesCount {
 		left := pointerToTreeValue(nodes[i].left, nodesCount)
 		right := pointerToTreeValue(nodes[i].right, nodesCount)
-		if err := writeNodePair(out, i, recordSize, left, right); err != nil {
+		if left > 0xFFFFFFFF || right > 0xFFFFFFFF {
+			return nil, fmt.Errorf("node %d: tree value exceeds 32-bit record size (l=%d r=%d)", i, left, right)
+		}
+		if err := writeNodePair(out, i, recordSize, uint32(left), uint32(right)); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-func pointerToTreeValue(p pointer, outNodeCount uint32) uint32 {
+func smallestRecordSize(nodes canonNodes, nodeCount uint32) (uint64, error) {
+	maxValue := uint64(nodeCount)
+	for _, node := range nodes {
+		for _, p := range [...]pointer{node.left, node.right} {
+			if value := pointerToTreeValue(p, nodeCount); value > maxValue {
+				maxValue = value
+			}
+		}
+	}
+	switch {
+	case maxValue <= 0xFFFFFF:
+		return 24, nil
+	case maxValue <= 0x0FFFFFFF:
+		return 28, nil
+	case maxValue <= 0xFFFFFFFF:
+		return 32, nil
+	default:
+		return 0, fmt.Errorf("tree value %d exceeds maximum 32-bit record value", maxValue)
+	}
+}
+
+func pointerToTreeValue(p pointer, outNodeCount uint32) uint64 {
 	switch p.kind {
 	case nullKind:
-		return outNodeCount
+		return uint64(outNodeCount)
 	case nodeKind:
-		return p.id
+		return uint64(p.id)
 	case dataKind:
-		return p.id + outNodeCount + dataSectionSeparatorSize
+		return uint64(p.id) + uint64(outNodeCount) + dataSectionSeparatorSize
 	}
-	return outNodeCount
+	return uint64(outNodeCount)
 }
 
 func writeNodePair(buf []byte, idx uint32, recordSize uint64, left, right uint32) error {

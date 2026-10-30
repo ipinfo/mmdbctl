@@ -45,6 +45,14 @@ func TestMetadataEquivalentChecksReleaseMetadataByDefault(t *testing.T) {
 		t.Fatalf("metadataEquivalent should allow node_count changes, got %q", msg)
 	}
 
+	narrowerRecordSize := base
+	narrowerRecordSize.RecordSize = 24
+	base32 := base
+	base32.RecordSize = 32
+	if ok, msg := metadataEquivalent(base32, narrowerRecordSize); !ok {
+		t.Fatalf("metadataEquivalent should allow a narrower record_size, got %q", msg)
+	}
+
 	tests := []struct {
 		name string
 		edit func(*maxminddb.Metadata)

@@ -133,7 +133,6 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 		return result, fmt.Errorf("failure during canonicalization: %w", err)
 	}
 	result.OutputNodeCount = uint32(len(canon))
-	result.OutputTreeBytes = uint64(result.OutputNodeCount) * nodeBytes
 	logger.Debug(fmt.Sprintf("phase1: canonicalize done in %s — %d -> %d nodes (%+.2f%%)",
 		time.Since(canonicalizeStartTime).Round(time.Millisecond),
 		nodeCount,
@@ -160,11 +159,18 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 		}
 	}
 
+	outputRecordSize, err := smallestRecordSize(canon, result.OutputNodeCount)
+	if err != nil {
+		return result, err
+	}
+	result.OutputTreeBytes = uint64(result.OutputNodeCount) * (outputRecordSize / 4)
+	logger.Debug(fmt.Sprintf("record size: %d -> %d bits", recordSize, outputRecordSize))
+
 	// Phase 2: emit the new tree with rewritten pointers. Output node indices
 	// are assigned in canonicalization order, with the root pinned at index 0.
 	logger.Debug(fmt.Sprintf("phase2: emit tree (%s)", format.DecimalBytes(result.OutputTreeBytes)))
 	buildTreeStartTime := time.Now()
-	searchTree, err := buildSearchTree(canon, uint64(recordSize))
+	searchTree, err := buildSearchTree(canon, outputRecordSize)
 	if err != nil {
 		return result, err
 	}
@@ -179,6 +185,7 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 	// the data is identical and we don't use it after this phase other than to write it
 	// to file.
 	meta["node_count"] = result.OutputNodeCount
+	meta["record_size"] = uint16(outputRecordSize)
 	encodedMeta, err := encodeMetadata(meta)
 	if err != nil {
 		return result, fmt.Errorf("encode metadata: %w", err)
