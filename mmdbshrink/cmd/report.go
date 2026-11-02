@@ -109,6 +109,9 @@ func printValidation(r verify.Report, opts verify.Options) {
 		format.Int(uint64(m.ShrunkNodes)),
 		nodePct,
 	)
+	if m.ShrunkRecordSize != m.RecordSize {
+		fmt.Printf("%23srecord_size: %d -> %d\n", "", m.RecordSize, m.ShrunkRecordSize)
+	}
 
 	if r.FixedProbes.N == 0 {
 		return

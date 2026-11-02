@@ -219,6 +219,21 @@ output:  /dev/null
 elapsed: 20.719s
 ```
 
+### Record size
+
+By default the shrunk file keeps the input's record size, the number of bits
+the search tree uses for each pointer. After shrinking there are fewer nodes
+and a smaller data section, so the tree may fit in a smaller record size,
+which makes it smaller still. Use `--record-size` to choose it:
+
+```bash
+$ mmdbshrink --record-size 24 ipinfo_lite.mmdb
+```
+
+If the shrunk tree doesn't fit, `mmdbshrink` fails and reports the smallest
+record size that does. Lookup speed can change with the record size, so check
+the `bench` section of the report before using the output.
+
 ## Go Library
 
 The shrinking tooling is also available as Go packages under

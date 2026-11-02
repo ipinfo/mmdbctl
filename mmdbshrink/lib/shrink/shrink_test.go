@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/maxmind/mmdbwriter"
@@ -43,6 +44,15 @@ func TestShrinkLookupEquivalence(t *testing.T) {
 					t.Errorf("expected smaller output: %d -> %d bytes", res.InputBytes, res.OutputBytes)
 				}
 
+				shrunk, err := maxminddb.Open(out)
+				if err != nil {
+					t.Fatalf("open shrunk output: %v", err)
+				}
+				if shrunk.Metadata.RecordSize != uint(recordSize) {
+					t.Errorf("record_size = %d, want the input's %d", shrunk.Metadata.RecordSize, recordSize)
+				}
+				shrunk.Close()
+
 				assertEquivalent(t, in, out)
 
 				// Shrinking the output again must be a fixed point.
@@ -62,8 +72,37 @@ func TestShrinkLookupEquivalence(t *testing.T) {
 					t.Fatalf("Shrink(DisableCompact): %v", err)
 				}
 				assertEquivalent(t, in, nc)
+
+				// Every record size fits the fixture, narrower or wider than
+				// the input's, and must be equivalent.
+				for _, outputRecordSize := range []uint16{24, 28, 32} {
+					rs := filepath.Join(dir, fmt.Sprintf("rs%d.mmdb", outputRecordSize))
+					res, err := Shrink(nil, in, rs, Options{RecordSize: outputRecordSize})
+					if err != nil {
+						t.Fatalf("Shrink(RecordSize %d): %v", outputRecordSize, err)
+					}
+					if res.OutputRecordSize != outputRecordSize {
+						t.Errorf("Result.OutputRecordSize = %d, want %d", res.OutputRecordSize, outputRecordSize)
+					}
+					shrunk, err := maxminddb.Open(rs)
+					if err != nil {
+						t.Fatalf("open shrunk output: %v", err)
+					}
+					if shrunk.Metadata.RecordSize != uint(outputRecordSize) {
+						t.Errorf("record_size = %d, want %d", shrunk.Metadata.RecordSize, outputRecordSize)
+					}
+					shrunk.Close()
+					assertEquivalent(t, in, rs)
+				}
 			})
 		}
+	}
+}
+
+func TestShrinkRejectsUnsupportedRecordSize(t *testing.T) {
+	_, err := Shrink(nil, "missing.mmdb", "out.mmdb", Options{RecordSize: 16})
+	if err == nil || !strings.Contains(err.Error(), "unsupported record size 16") {
+		t.Fatalf("Shrink error = %v, want unsupported record size", err)
 	}
 }
 
@@ -156,12 +195,13 @@ func assertEquivalent(t *testing.T, basePath, otherPath string) {
 		t.Errorf("reader Verify() on shrunk output: %v", err)
 	}
 
-	// Metadata: identical except node_count.
+	// Metadata: identical except node_count and record_size.
 	bm, om := base.Metadata, other.Metadata
 	if om.NodeCount >= bm.NodeCount {
 		t.Errorf("node_count %d -> %d, expected a decrease", bm.NodeCount, om.NodeCount)
 	}
 	om.NodeCount = bm.NodeCount
+	om.RecordSize = bm.RecordSize
 	if !reflect.DeepEqual(bm, om) {
 		t.Errorf("metadata differs:\n base: %+v\nother: %+v", bm, om)
 	}

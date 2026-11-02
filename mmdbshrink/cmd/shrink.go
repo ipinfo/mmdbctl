@@ -24,6 +24,7 @@ var completionsShrinkFlags = map[string]complete.Predictor{
 	"--dry-run":     predict.Nothing,
 	"--full-report": predict.Nothing,
 	"--no-compact":  predict.Nothing,
+	"--record-size": predict.Set([]string{"24", "28", "32"}),
 }
 
 func printHelpShrink(prog string) {
@@ -67,6 +68,11 @@ Options:
       default: false.
 
   Shrinking:
+    --record-size <24 | 28 | 32>
+      size of records in the output's search tree. a smaller record size
+      makes the tree smaller, but the shrunk tree must fit in it: if it
+      doesn't, the command fails and reports the smallest size that fits.
+      default: the input's record size.
     --no-compact
       skip data-section compaction and copy the data section verbatim.
       debug only.
@@ -81,11 +87,13 @@ func cmdShrink(prog string, args []string) error {
 	var disableCompact bool
 	var overwrite bool
 	var fullReport bool
+	var recordSize uint16
 
 	fs := newFlagSet("shrink")
 	fs.BoolVar(&dryRun, "dry-run", false, "skip writing output; just report the savings")
 	fs.BoolVarP(&verbose, "verbose", "v", false, "verbose: log phase boundaries, memory snapshots, periodic finalize counts")
 	fs.BoolVar(&disableCompact, "no-compact", false, "skip data-section compaction; copy data section verbatim (debug)")
+	fs.Uint16Var(&recordSize, "record-size", 0, "record size of the output's search tree; 0 keeps the input's record size")
 	fs.BoolVarP(&overwrite, "overwrite", "o", false, "overwrite output file if it already exists, defaults to false")
 	fs.BoolVar(&fullReport, "full-report", false, "also measure reader memory of input and output")
 	fs.BoolVarP(&help, "help", "h", false, "show help.")
@@ -129,6 +137,7 @@ func cmdShrink(prog string, args []string) error {
 	logger := newLogger(verbose)
 	opts := shrink.Options{
 		DisableCompact:     disableCompact,
+		RecordSize:         recordSize,
 		LogMemorySnapshots: verbose,
 	}
 
@@ -182,9 +191,14 @@ func printSummary(inputPath, outputPath string, res shrink.Result) {
 		format.Int(uint64(res.OutputNodeCount)),
 		format.PctDelta(nodesDiff, int64(res.InputNodeCount)),
 	)
-	fmt.Fprintf(w, "  tree:\t%s\t->\t%s\t\n",
+	var recordSizeDiff string
+	if res.OutputRecordSize != res.InputRecordSize {
+		recordSizeDiff = fmt.Sprintf("(record_size %d -> %d)", res.InputRecordSize, res.OutputRecordSize)
+	}
+	fmt.Fprintf(w, "  tree:\t%s\t->\t%s\t%s\n",
 		format.DecimalBytes(res.InputTreeBytes),
 		format.DecimalBytes(res.OutputTreeBytes),
+		recordSizeDiff,
 	)
 	bytesDiff := int64(res.OutputDataBytes) - int64(res.InputDataBytes)
 	fmt.Fprintf(w, "  data:\t%s\t->\t%s\t%s\n",

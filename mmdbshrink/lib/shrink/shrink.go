@@ -22,6 +22,12 @@ type Options struct {
 	// DisableCompact skips the data section compaction step
 	DisableCompact bool
 
+	// RecordSize is the record size in bits of the output search tree:
+	// 24, 28 or 32. A smaller record size makes the tree smaller, but every
+	// node and data pointer must fit in it, otherwise Shrink fails.
+	// Zero keeps the input's record size.
+	RecordSize uint16
+
 	// LogMemorySnapshots logs a memory snapshot after certain steps.
 	// This is expensive and recommended for debugging only as it calls
 	// runtime.ReadMemStats that stops the world.
@@ -38,6 +44,10 @@ type Result struct {
 	InputNodeCount uint32
 	// OutputNodeCount is the number of nodes in the output file
 	OutputNodeCount uint32
+	// InputRecordSize is the record size in bits of the input file
+	InputRecordSize uint16
+	// OutputRecordSize is the record size in bits of the output file
+	OutputRecordSize uint16
 	// InputTreeBytes is the size in bytes of the search tree in the input file
 	InputTreeBytes uint64
 	// OutputTreeBytes is the size in bytes of the search tree in the output file
@@ -63,6 +73,12 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 
 	startTime := time.Now()
 	result := Result{}
+
+	switch opts.RecordSize {
+	case 0, 24, 28, 32:
+	default:
+		return result, fmt.Errorf("unsupported record size %d, must be 24, 28 or 32", opts.RecordSize)
+	}
 
 	logger.Debug(fmt.Sprintf("read: %s", inputPath))
 	timeRead := time.Now()
@@ -103,6 +119,7 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 		return result, fmt.Errorf("unsupported record_size %d", recordSize)
 	}
 	result.InputNodeCount = nodeCount
+	result.InputRecordSize = recordSize
 	nodeBytes := uint64(recordSize) / 4
 	treeBytes := uint64(nodeCount) * nodeBytes
 	result.InputTreeBytes = treeBytes
@@ -133,7 +150,6 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 		return result, fmt.Errorf("failure during canonicalization: %w", err)
 	}
 	result.OutputNodeCount = uint32(len(canon))
-	result.OutputTreeBytes = uint64(result.OutputNodeCount) * nodeBytes
 	logger.Debug(fmt.Sprintf("phase1: canonicalize done in %s — %d -> %d nodes (%+.2f%%)",
 		time.Since(canonicalizeStartTime).Round(time.Millisecond),
 		nodeCount,
@@ -160,11 +176,19 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 		}
 	}
 
+	outputRecordSize, err := treeRecordSize(canon, recordSize, opts.RecordSize)
+	if err != nil {
+		return result, err
+	}
+	result.OutputRecordSize = uint16(outputRecordSize)
+	result.OutputTreeBytes = uint64(result.OutputNodeCount) * (outputRecordSize / 4)
+	logger.Debug(fmt.Sprintf("record size: %d -> %d bits", recordSize, outputRecordSize))
+
 	// Phase 2: emit the new tree with rewritten pointers. Output node indices
 	// are assigned in canonicalization order, with the root pinned at index 0.
 	logger.Debug(fmt.Sprintf("phase2: emit tree (%s)", format.DecimalBytes(result.OutputTreeBytes)))
 	buildTreeStartTime := time.Now()
-	searchTree, err := buildSearchTree(canon, uint64(recordSize))
+	searchTree, err := buildSearchTree(canon, outputRecordSize)
 	if err != nil {
 		return result, err
 	}
@@ -173,12 +197,13 @@ func Shrink(logger *slog.Logger, inputPath, outputPath string, opts Options) (Re
 	}
 	logger.Debug(fmt.Sprintf("phase2: emit tree done in %s", time.Since(buildTreeStartTime).Round(time.Millisecond)))
 
-	// Phase 3: rewrite metadata's node_count. Other fields are preserved.
+	// Phase 3: rewrite metadata's node_count and record_size. Other fields are preserved.
 	logger.Debug("phase3: rewrite metadata")
 	// It's fine reusing the old meta data structure, other than changing the node count
-	// the data is identical and we don't use it after this phase other than to write it
-	// to file.
+	// and record size the data is identical and we don't use it after this phase other
+	// than to write it to file.
 	meta["node_count"] = result.OutputNodeCount
+	meta["record_size"] = uint16(outputRecordSize)
 	encodedMeta, err := encodeMetadata(meta)
 	if err != nil {
 		return result, fmt.Errorf("encode metadata: %w", err)

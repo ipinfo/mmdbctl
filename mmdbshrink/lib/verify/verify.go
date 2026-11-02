@@ -116,8 +116,8 @@ func (e *CheckError) Error() string {
 	return "FAIL " + string(e.Check) + ": " + e.Detail
 }
 
-// MetadataStage describes the metadata both files share, plus the one field
-// allowed to differ.
+// MetadataStage describes the metadata both files share, plus the fields
+// allowed to differ. RecordSize is the baseline's.
 type MetadataStage struct {
 	IPVersion         uint
 	RecordSize        uint
@@ -127,6 +127,7 @@ type MetadataStage struct {
 	BuildEpoch        uint
 	BaselineNodes     uint
 	ShrunkNodes       uint
+	ShrunkRecordSize  uint
 }
 
 // LookupStage summarises a batch of paired lookups that all matched.
@@ -256,6 +257,7 @@ func Verify(logger *slog.Logger, basePath, shrunkPath string, opts Options) (Rep
 		BuildEpoch:        a.Metadata.BuildEpoch,
 		BaselineNodes:     a.Metadata.NodeCount,
 		ShrunkNodes:       b.Metadata.NodeCount,
+		ShrunkRecordSize:  b.Metadata.RecordSize,
 	}
 	logger.Debug(fmt.Sprintf("metadata: ok, node_count %d -> %d", a.Metadata.NodeCount, b.Metadata.NodeCount))
 
