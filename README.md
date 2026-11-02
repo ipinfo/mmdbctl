@@ -220,6 +220,11 @@ Options:
       default: false.
 
   Shrinking:
+    --record-size <24 | 28 | 32>
+      size of records in the output's search tree. a smaller record size
+      makes the tree smaller, but the shrunk tree must fit in it: if it
+      doesn't, the command fails and reports the smallest size that fits.
+      default: the input's record size.
     --no-compact
       skip data-section compaction and copy the data section verbatim.
       debug only.

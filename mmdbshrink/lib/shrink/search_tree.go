@@ -24,6 +24,26 @@ func buildSearchTree(nodes canonNodes, recordSize uint64) ([]byte, error) {
 	return out, nil
 }
 
+// treeRecordSize returns the record size of the output tree: requested if it's
+// set, inputRecordSize otherwise. The input's record size always fits, as
+// shrinking never adds nodes or grows the data section.
+// Returns an error if a pointer doesn't fit in requested bits.
+func treeRecordSize(nodes canonNodes, inputRecordSize, requested uint16) (uint64, error) {
+	if requested == 0 {
+		return uint64(inputRecordSize), nil
+	}
+	smallest, err := smallestRecordSize(nodes, uint32(len(nodes)))
+	if err != nil {
+		return 0, err
+	}
+	if uint64(requested) < smallest {
+		return 0, fmt.Errorf("record size %d is too small for this database, the smallest that fits is %d", requested, smallest)
+	}
+	return uint64(requested), nil
+}
+
+// smallestRecordSize returns the smallest supported record size that fits
+// every pointer of the tree.
 func smallestRecordSize(nodes canonNodes, nodeCount uint32) (uint64, error) {
 	maxValue := uint64(nodeCount)
 	for _, node := range nodes {

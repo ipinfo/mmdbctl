@@ -45,12 +45,15 @@ func TestMetadataEquivalentChecksReleaseMetadataByDefault(t *testing.T) {
 		t.Fatalf("metadataEquivalent should allow node_count changes, got %q", msg)
 	}
 
-	narrowerRecordSize := base
-	narrowerRecordSize.RecordSize = 24
-	base32 := base
-	base32.RecordSize = 32
-	if ok, msg := metadataEquivalent(base32, narrowerRecordSize); !ok {
-		t.Fatalf("metadataEquivalent should allow a narrower record_size, got %q", msg)
+	for _, recordSize := range []uint{28, 32} {
+		sameExceptRecordSize := base
+		sameExceptRecordSize.RecordSize = recordSize
+		if ok, msg := metadataEquivalent(base, sameExceptRecordSize); !ok {
+			t.Fatalf("metadataEquivalent should allow record_size %d -> %d, got %q", base.RecordSize, recordSize, msg)
+		}
+		if ok, msg := metadataEquivalent(sameExceptRecordSize, base); !ok {
+			t.Fatalf("metadataEquivalent should allow record_size %d -> %d, got %q", recordSize, base.RecordSize, msg)
+		}
 	}
 
 	tests := []struct {
@@ -85,13 +88,6 @@ func TestMetadataEquivalentChecksReleaseMetadataByDefault(t *testing.T) {
 				m.IPVersion = 6
 			},
 			want: "ip_version differs",
-		},
-		{
-			name: "record_size",
-			edit: func(m *maxminddb.Metadata) {
-				m.RecordSize = 28
-			},
-			want: "record_size differs",
 		},
 		{
 			name: "languages",

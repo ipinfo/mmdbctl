@@ -1,6 +1,43 @@
 package shrink
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestTreeRecordSize(t *testing.T) {
+	// A single node whose data pointer needs a 28-bit record.
+	nodes := canonNodes{{left: pointer{kind: dataKind, id: 0x1000000}}}
+	tests := []struct {
+		name       string
+		input      uint16
+		requested  uint16
+		recordSize uint64
+		err        string
+	}{
+		{name: "unset keeps the input's", input: 32, requested: 0, recordSize: 32},
+		{name: "narrower", input: 32, requested: 28, recordSize: 28},
+		{name: "wider", input: 28, requested: 32, recordSize: 32},
+		{name: "too small", input: 32, requested: 24, err: "the smallest that fits is 28"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := treeRecordSize(nodes, tt.input, tt.requested)
+			if tt.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.err) {
+					t.Fatalf("treeRecordSize error = %v, want it to contain %q", err, tt.err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("treeRecordSize: %v", err)
+			}
+			if got != tt.recordSize {
+				t.Errorf("treeRecordSize = %d, want %d", got, tt.recordSize)
+			}
+		})
+	}
+}
 
 func TestSmallestRecordSize(t *testing.T) {
 	tests := []struct {
