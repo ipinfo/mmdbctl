@@ -54,7 +54,7 @@ func findMetadata(buf []byte) (start uint64, metaBytes []byte, err error) {
 // decodeMetadata reads the bytes that follow the metadata marker and
 // returns the top-level map as a map[string]any.
 func decodeMetadata(buf []byte) (map[string]any, error) {
-	d := &decoder{buf: buf}
+	d := &decoder{buf: buf, left: maxDecodedSize}
 	v, err := d.readValue()
 	if err != nil {
 		return nil, err
@@ -69,6 +69,8 @@ func decodeMetadata(buf []byte) (map[string]any, error) {
 type decoder struct {
 	buf []byte
 	off int
+	// left is how much more the decoder may decode, see maxDecodedSize.
+	left int
 }
 
 // maxDecodeDepth bounds how deeply the decoder will nest. Pointers can
@@ -78,6 +80,25 @@ type decoder struct {
 // reader uses.
 const maxDecodeDepth = 512
 
+// maxDecodedSize bounds the decoded metadata, counted as one per value plus
+// the length of every string and bytes payload. The depth limit alone is not
+// enough: an array of two pointers to the next array, repeated 30 times, is
+// under 200 bytes and decodes to a billion values. Without pointers the
+// decoded size never exceeds the encoded size, and the spec caps the metadata
+// section at 128KiB, so this leaves ample room for real metadata.
+const maxDecodedSize = 1 << 20
+
+// maxPrealloc caps the room reserved up front for a map or array. Their entry
+// count comes from the input and can claim up to 16 million entries, while
+// real metadata containers hold a handful.
+const maxPrealloc = 64
+
+// errDecodeLimit marks errors from the depth and size limits. They are
+// returned without the map and array context the decoder otherwise adds:
+// they surface hundreds of levels down, where that context would repeat at
+// every level.
+var errDecodeLimit = errors.New("decoder: limit exceeded")
+
 func (d *decoder) readValue() (any, error) {
 	return d.readValueAt(0)
 }
@@ -86,7 +107,10 @@ func (d *decoder) readValue() (any, error) {
 // deeper than maxDecodeDepth.
 func (d *decoder) readValueAt(depth int) (any, error) {
 	if depth > maxDecodeDepth {
-		return nil, errors.New("decoder: maximum nesting depth exceeded")
+		return nil, fmt.Errorf("%w: nested deeper than %d levels", errDecodeLimit, maxDecodeDepth)
+	}
+	if err := d.spend(1); err != nil {
+		return nil, err
 	}
 	if d.off >= len(d.buf) {
 		return nil, errors.New("decoder: unexpected EOF")
@@ -121,8 +145,12 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 		if d.buf[target]>>5 == 1 {
 			return nil, fmt.Errorf("decoder: pointer @%d targets another pointer", target)
 		}
-		sub := &decoder{buf: d.buf, off: int(target)}
-		return sub.readValueAt(depth + 1)
+		// Decode the target with this decoder so it draws on the same
+		// budget, then resume after the pointer.
+		d.off = int(target)
+		v, err := d.readValueAt(depth + 1)
+		d.off = int(next)
+		return v, err
 	case 2, 4: // utf8 string, bytes
 		n, err := d.readSize(size)
 		if err != nil {
@@ -130,6 +158,9 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 		}
 		if d.off+n > len(d.buf) {
 			return nil, fmt.Errorf("decoder: string/bytes len %d exceeds buf", n)
+		}
+		if err := d.spend(n); err != nil {
+			return nil, err
 		}
 		s := string(d.buf[d.off : d.off+n])
 		d.off += n
@@ -154,11 +185,11 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		m := make(map[string]any, n)
-		for i := 0; i < n; i++ {
+		m := make(map[string]any, min(n, maxPrealloc))
+		for i := range n {
 			kv, err := d.readValueAt(depth + 1)
 			if err != nil {
-				return nil, fmt.Errorf("map key %d: %w", i, err)
+				return nil, withContext(err, "map key %d", i)
 			}
 			ks, ok := kv.(string)
 			if !ok {
@@ -166,7 +197,7 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 			}
 			vv, err := d.readValueAt(depth + 1)
 			if err != nil {
-				return nil, fmt.Errorf("map value for %q: %w", ks, err)
+				return nil, withContext(err, "map value for %q", ks)
 			}
 			m[ks] = vv
 		}
@@ -182,13 +213,13 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		a := make([]any, n)
-		for i := 0; i < n; i++ {
+		a := make([]any, 0, min(n, maxPrealloc))
+		for i := range n {
 			v, err := d.readValueAt(depth + 1)
 			if err != nil {
-				return nil, fmt.Errorf("array elem %d: %w", i, err)
+				return nil, withContext(err, "array elem %d", i)
 			}
-			a[i] = v
+			a = append(a, v)
 		}
 		return a, nil
 	case 14: // boolean (extended) — size is 0 or 1
@@ -196,6 +227,24 @@ func (d *decoder) readValueAt(depth int) (any, error) {
 	default:
 		return nil, fmt.Errorf("decoder: unsupported kind %d", kind)
 	}
+}
+
+// spend charges n against the decoded size budget.
+func (d *decoder) spend(n int) error {
+	if n > d.left {
+		return fmt.Errorf("%w: decodes to more than %d", errDecodeLimit, maxDecodedSize)
+	}
+	d.left -= n
+	return nil
+}
+
+// withContext prefixes err with where in a map or array it happened, except
+// for limit errors, see errDecodeLimit.
+func withContext(err error, format string, args ...any) error {
+	if errors.Is(err, errDecodeLimit) {
+		return err
+	}
+	return fmt.Errorf(format+": %w", append(args, err)...)
 }
 
 // readSize decodes a length/count prefix

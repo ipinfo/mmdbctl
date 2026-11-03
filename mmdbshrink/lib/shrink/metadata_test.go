@@ -1,6 +1,7 @@
 package shrink
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -179,5 +180,55 @@ func TestMetadataDecodesPointers(t *testing.T) {
 	}
 	if _, err := decodeMetadata(bad); err == nil {
 		t.Error("expected error for pointer-to-pointer metadata, got nil")
+	}
+}
+
+// TestMetadataDecodeLimits covers metadata that is tiny on disk but would take
+// unbounded stack or memory to decode. Each case must fail with a short error
+// and without allocating much.
+func TestMetadataDecodeLimits(t *testing.T) {
+	// fanOut builds map(1) {"a": L1}, where each level is an array of two
+	// pointers to the next and the last level is a uint16, so it decodes to
+	// 2^levels values.
+	fanOut := func(levels int) []byte {
+		ptr := func(off int) []byte { return []byte{0x20 | byte(off>>8), byte(off)} }
+		buf := append([]byte{0xE1, 0x41, 'a'}, ptr(5)...)
+		for k := 1; k <= levels; k++ {
+			next := ptr(5 + 6*k)
+			buf = append(buf, 0x02, 0x04)
+			buf = append(buf, next...)
+			buf = append(buf, next...)
+		}
+		return append(buf, 0xA0)
+	}
+
+	tests := []struct {
+		name string
+		buf  []byte
+	}{
+		// map(1) whose first key is a pointer back to the map itself.
+		{"self reference", []byte{0xE1, 0x20, 0x00}},
+		// 4 million values from 140 bytes.
+		{"pointer fan-out", fanOut(22)},
+		// A map and an array claiming 16 million entries that aren't there.
+		{"map count past end", []byte{0xFF, 0xFF, 0xFF, 0xFF}},
+		{"array count past end", []byte{0x1F, 0x04, 0xFF, 0xFF, 0xFF}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			_, err := decodeMetadata(tc.buf)
+			runtime.ReadMemStats(&after)
+			if err == nil {
+				t.Fatal("decodeMetadata succeeded, want an error")
+			}
+			if len(err.Error()) > 200 {
+				t.Errorf("error is %d bytes long: %.200s...", len(err.Error()), err)
+			}
+			if alloc := after.TotalAlloc - before.TotalAlloc; alloc > 64<<20 {
+				t.Errorf("allocated %d MB, want at most 64", alloc>>20)
+			}
+		})
 	}
 }
