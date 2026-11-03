@@ -19,11 +19,12 @@ var predictReadFmts = []string{
 
 var completionsRead = &complete.Command{
 	Flags: map[string]complete.Predictor{
-		"--nocolor": predict.Nothing,
-		"-h":        predict.Nothing,
-		"--help":    predict.Nothing,
-		"-f":        predict.Set(predictReadFmts),
-		"--format":  predict.Set(predictReadFmts),
+		"--nocolor":   predict.Nothing,
+		"--no-header": predict.Nothing,
+		"-h":          predict.Nothing,
+		"--help":      predict.Nothing,
+		"-f":          predict.Set(predictReadFmts),
+		"--format":    predict.Set(predictReadFmts),
 	},
 }
 
@@ -37,6 +38,8 @@ Options:
       disable colored output.
     --help, -h
       show help.
+    --no-header
+      omit the header line in "csv" and "tsv" output.
 
   Format:
     -f <format>, --format <format>
