@@ -1,3 +1,11 @@
+# 1.5.2
+
+- [#60 shrink: add `--record-size` to shrink the output to a smaller record size](https://github.com/ipinfo/mmdbctl/pull/60)
+- [#56 import: fix panic on JSON records that aren't objects](https://github.com/ipinfo/mmdbctl/pull/56)
+- [#57 metadata: read data type size prefixes in full](https://github.com/ipinfo/mmdbctl/pull/57)
+- [#58 shrink: bound metadata decoding so crafted files can't crash it or exhaust memory](https://github.com/ipinfo/mmdbctl/pull/58)
+- [#59 shrink: cap preallocation when verifying crafted records](https://github.com/ipinfo/mmdbctl/pull/59)
+
 # 1.5.1
 
 - Build `mmdbctl` and `mmdbshrink` binaries with Go 1.27.3, which fixes CVE-2026-111943
