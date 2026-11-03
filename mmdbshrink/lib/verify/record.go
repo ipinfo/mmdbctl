@@ -39,6 +39,12 @@ func (r canonicalRecord) found() bool {
 	return len(r.data) > 0
 }
 
+// maxCanonicalPrealloc caps how many map entries the canonical encoder
+// reserves room for up front. The entry count in an MMDB is attacker-
+// controlled and reaches 16 million, which at 48 bytes per entry would be
+// hundreds of megabytes reserved for a record that may hold a single pair.
+const maxCanonicalPrealloc = 1024
+
 type canonicalMapEntry struct {
 	key   []byte
 	value []byte
@@ -59,7 +65,13 @@ func appendCanonicalMMDBValue(dst []byte, d *mmdbdata.Decoder, path string, sche
 		if err != nil {
 			return dst, err
 		}
-		entries := make([]canonicalMapEntry, 0, size)
+		// The entry count comes from the data section and can claim up to
+		// 16 million entries. Pre-allocating for all of them lets a
+		// four-byte record ask for hundreds of megabytes, so cap the
+		// capacity hint and let the slice grow as entries arrive. A map
+		// with more entries than the cap still decodes correctly, just
+		// with a few more reallocations.
+		entries := make([]canonicalMapEntry, 0, min(size, maxCanonicalPrealloc))
 		for key, err := range iter {
 			if err != nil {
 				return dst, err
