@@ -26,20 +26,20 @@ installs the matching binaries: `arm64` on Apple Silicon, including when run
 under Rosetta, and `amd64` on Intel:
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/macos.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/macos.sh | sh
 ```
 
 ### Debian / Ubuntu (amd64)
 
 ```bash
-curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/deb.sh | sh
+curl -Ls https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/deb.sh | sh
 ```
 
 OR
 
 ```bash
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/mmdbctl_1.5.2.deb
-sudo dpkg -i mmdbctl_1.5.2.deb
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/mmdbctl_1.5.3.deb
+sudo dpkg -i mmdbctl_1.5.3.deb
 ```
 
 ### Windows Powershell
@@ -47,7 +47,7 @@ sudo dpkg -i mmdbctl_1.5.2.deb
 _Note_: run powershell as administrator before executing this command.
 
 ```bash
-iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/windows.ps1 | iex
+iwr -useb https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/windows.ps1 | iex
 ```
 
 ### Using `go install`
@@ -101,11 +101,11 @@ After choosing a platform `PLAT` from above, run:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/mmdbctl_1.5.2_${PLAT}.tar.gz
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/mmdbctl_1.5.3_${PLAT}.tar.gz
 # OR
-wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/mmdbctl_1.5.2_${PLAT}.tar.gz
-tar -xvf mmdbctl_1.5.2_${PLAT}.tar.gz
-mv mmdbctl_1.5.2_${PLAT} /usr/local/bin/mmdbctl
+wget https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/mmdbctl_1.5.3_${PLAT}.tar.gz
+tar -xvf mmdbctl_1.5.3_${PLAT}.tar.gz
+mv mmdbctl_1.5.3_${PLAT} /usr/local/bin/mmdbctl
 ```
 
 The standalone `mmdbshrink` binary is published in the same release, for the
@@ -113,9 +113,9 @@ same platforms:
 
 ```bash
 # for Windows, use ".zip" instead of ".tar.gz"
-curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.2/mmdbshrink_1.5.2_${PLAT}.tar.gz
-tar -xvf mmdbshrink_1.5.2_${PLAT}.tar.gz
-mv mmdbshrink_1.5.2_${PLAT} /usr/local/bin/mmdbshrink
+curl -LO https://github.com/ipinfo/mmdbctl/releases/download/mmdbctl-1.5.3/mmdbshrink_1.5.3_${PLAT}.tar.gz
+tar -xvf mmdbshrink_1.5.3_${PLAT}.tar.gz
+mv mmdbshrink_1.5.3_${PLAT} /usr/local/bin/mmdbshrink
 ```
 
 ### Using `git`

@@ -1,3 +1,7 @@
+# 1.5.3
+
+- [#61 read: add `--no-header` to omit the header line in CSV/TSV output](https://github.com/ipinfo/mmdbctl/pull/61)
+
 # 1.5.2
 
 - [#60 shrink: add `--record-size` to shrink the output to a smaller record size](https://github.com/ipinfo/mmdbctl/pull/60)
