@@ -269,6 +269,13 @@ ip	city	country	geoname_id	latitude	longitude	postalcode	region	timezone
 8.8.8.8	Mountain View	US	5375480	37.4056	-122.0775	94043	California	America/Los_Angeles
 ```
 
+CSV or TSV without the header line:
+
+```bash
+$ mmdbctl read -f csv --no-header 8.8.8.8 location.mmdb
+8.8.8.8,Mountain View,US,5375480,37.4056,-122.0775,94043,California,America/Los_Angeles
+```
+
 Via a file:
 
 ```bash

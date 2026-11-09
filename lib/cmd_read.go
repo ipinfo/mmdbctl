@@ -25,6 +25,7 @@ var predictReadFmts = []string{
 type CmdReadFlags struct {
 	Help    bool
 	NoColor bool
+	NoHdr   bool
 	Format  string
 }
 
@@ -42,6 +43,11 @@ func (f *CmdReadFlags) Init() {
 	pflag.BoolVar(
 		&f.NoColor,
 		"nocolor", false,
+		_h,
+	)
+	pflag.BoolVar(
+		&f.NoHdr,
+		"no-header", false,
 		_h,
 	)
 	pflag.StringVarP(
@@ -133,7 +139,7 @@ func CmdRead(f CmdReadFlags, args []string, printHelp func()) error {
 		if !hdrWritten {
 			hdrWritten = true
 
-			if requiresHdr {
+			if requiresHdr && !f.NoHdr {
 				hdr := append([]string{"ip"}, sortedMapKeys(recordStr)...)
 				if err := wr.Write(hdr); err != nil {
 					return fmt.Errorf(

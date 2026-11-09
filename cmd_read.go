@@ -19,11 +19,12 @@ var predictReadFmts = []string{
 
 var completionsRead = &complete.Command{
 	Flags: map[string]complete.Predictor{
-		"--nocolor": predict.Nothing,
-		"-h":        predict.Nothing,
-		"--help":    predict.Nothing,
-		"-f":        predict.Set(predictReadFmts),
-		"--format":  predict.Set(predictReadFmts),
+		"--nocolor":   predict.Nothing,
+		"--no-header": predict.Nothing,
+		"-h":          predict.Nothing,
+		"--help":      predict.Nothing,
+		"-f":          predict.Set(predictReadFmts),
+		"--format":    predict.Set(predictReadFmts),
 	},
 }
 
@@ -44,6 +45,9 @@ Options:
       can be "json", "json-compact", "json-pretty", "tsv" or "csv".
       note that "json" is short for "json-compact".
       default: json.
+    --no-header
+      omit the header line in "csv" and "tsv" output.
+      default: false.
 `, progBase)
 }
 

@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"bytes"
+	"io"
 	"net"
 	"net/netip"
 	"os"
@@ -87,4 +89,95 @@ func TestReadLookupOnIPv6Database(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestReadNoHeader verifies that --no-header drops the header line of the csv
+// and tsv formats, the way CmdExport does, and that it is still written by
+// default.
+func TestReadNoHeader(t *testing.T) {
+	tempDir := t.TempDir()
+	inputFile := filepath.Join(tempDir, "input.csv")
+	mmdbFile := filepath.Join(tempDir, "test.mmdb")
+
+	csvData := "network,descr\n127.0.0.0/8,Loopback\n"
+	if err := os.WriteFile(inputFile, []byte(csvData), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := CmdImport(CmdImportFlags{
+		Ip:    4,
+		Size:  32,
+		Merge: "none",
+		In:    inputFile,
+		Out:   mmdbFile,
+		Csv:   true,
+	}, []string{}, func() {})
+	if err != nil {
+		t.Fatalf("import failed: %s", err)
+	}
+
+	// The imported record holds "descr" plus the "network" field import adds,
+	// and columns after "ip" are sorted by key.
+	tests := []struct {
+		name   string
+		format string
+		noHdr  bool
+		want   string
+	}{
+		{"csv", "csv", false, "ip,descr,network\n127.0.0.1,Loopback,127.0.0.0/8\n"},
+		{"csv no header", "csv", true, "127.0.0.1,Loopback,127.0.0.0/8\n"},
+		{"tsv", "tsv", false, "ip\tdescr\tnetwork\n127.0.0.1\tLoopback\t127.0.0.0/8\n"},
+		{"tsv no header", "tsv", true, "127.0.0.1\tLoopback\t127.0.0.0/8\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := captureStdout(t, func() error {
+				return CmdRead(
+					CmdReadFlags{Format: tc.format, NoHdr: tc.noHdr},
+					[]string{"127.0.0.1", mmdbFile},
+					func() {},
+				)
+			})
+			if err != nil {
+				t.Fatalf("read failed: %s", err)
+			}
+			if out != tc.want {
+				t.Errorf("got %q, want %q", out, tc.want)
+			}
+		})
+	}
+}
+
+// captureStdout runs fn with os.Stdout replaced by a pipe and returns what fn
+// wrote to it, along with fn's error. CmdRead writes straight to os.Stdout.
+// The pipe is drained while fn runs, so fn can't block on a full pipe buffer.
+func captureStdout(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+
+	var buf bytes.Buffer
+	copied := make(chan error, 1)
+	go func() {
+		_, err := io.Copy(&buf, r)
+		copied <- err
+	}()
+
+	orig := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = orig }()
+
+	runErr := fn()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-copied; err != nil {
+		t.Fatal(err)
+	}
+	return buf.String(), runErr
 }
