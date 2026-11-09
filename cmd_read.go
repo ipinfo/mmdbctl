@@ -38,8 +38,6 @@ Options:
       disable colored output.
     --help, -h
       show help.
-    --no-header
-      omit the header line in "csv" and "tsv" output.
 
   Format:
     -f <format>, --format <format>
@@ -47,6 +45,9 @@ Options:
       can be "json", "json-compact", "json-pretty", "tsv" or "csv".
       note that "json" is short for "json-compact".
       default: json.
+    --no-header
+      omit the header line in "csv" and "tsv" output.
+      default: false.
 `, progBase)
 }
 
