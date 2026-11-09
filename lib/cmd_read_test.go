@@ -1,12 +1,12 @@
 package lib
 
 import (
+	"bytes"
 	"io"
 	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/oschwald/maxminddb-golang/v2"
@@ -91,10 +91,10 @@ func TestReadLookupOnIPv6Database(t *testing.T) {
 	}
 }
 
-// TestReadCSVNoHeader verifies that --no-header drops the header line of the
-// csv and tsv formats, the way CmdExport does, and that it is still written by
+// TestReadNoHeader verifies that --no-header drops the header line of the csv
+// and tsv formats, the way CmdExport does, and that it is still written by
 // default.
-func TestReadCSVNoHeader(t *testing.T) {
+func TestReadNoHeader(t *testing.T) {
 	tempDir := t.TempDir()
 	inputFile := filepath.Join(tempDir, "input.csv")
 	mmdbFile := filepath.Join(tempDir, "test.mmdb")
@@ -116,53 +116,58 @@ func TestReadCSVNoHeader(t *testing.T) {
 		t.Fatalf("import failed: %s", err)
 	}
 
-	for _, format := range []string{"csv", "tsv"} {
-		for _, noHdr := range []bool{true, false} {
-			out := captureStdout(t, func() error {
+	// The imported record holds "descr" plus the "network" field import adds,
+	// and columns after "ip" are sorted by key.
+	tests := []struct {
+		name   string
+		format string
+		noHdr  bool
+		want   string
+	}{
+		{"csv", "csv", false, "ip,descr,network\n127.0.0.1,Loopback,127.0.0.0/8\n"},
+		{"csv no header", "csv", true, "127.0.0.1,Loopback,127.0.0.0/8\n"},
+		{"tsv", "tsv", false, "ip\tdescr\tnetwork\n127.0.0.1\tLoopback\t127.0.0.0/8\n"},
+		{"tsv no header", "tsv", true, "127.0.0.1\tLoopback\t127.0.0.0/8\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := captureStdout(t, func() error {
 				return CmdRead(
-					CmdReadFlags{Format: format, NoHdr: noHdr},
+					CmdReadFlags{Format: tc.format, NoHdr: tc.noHdr},
 					[]string{"127.0.0.1", mmdbFile},
 					func() {},
 				)
 			})
-
-			lines := strings.Split(strings.TrimSpace(out), "\n")
-			wantLines := 2
-			if noHdr {
-				wantLines = 1
+			if err != nil {
+				t.Fatalf("read failed: %s", err)
 			}
-			if len(lines) != wantLines {
-				t.Fatalf(
-					"%s noHdr=%v: expected %d lines, got %d: %q",
-					format, noHdr, wantLines, len(lines), out,
-				)
+			if out != tc.want {
+				t.Errorf("got %q, want %q", out, tc.want)
 			}
-			if noHdr && strings.HasPrefix(lines[0], "ip") {
-				t.Fatalf("%s noHdr=true: header line written: %q", format, lines[0])
-			}
-			if !noHdr && !strings.HasPrefix(lines[0], "ip") {
-				t.Fatalf("%s noHdr=false: no header line: %q", format, lines[0])
-			}
-
-			// The row itself must still be there: dropping the header must not
-			// become dropping the output.
-			row := lines[len(lines)-1]
-			if !strings.Contains(row, "127.0.0.1") || !strings.Contains(row, "Loopback") {
-				t.Fatalf("%s noHdr=%v: unexpected row: %q", format, noHdr, row)
-			}
-		}
+		})
 	}
 }
 
-// captureStdout runs fn with os.Stdout replaced by a pipe and returns what was
-// written to it. CmdRead writes its non-json output straight to os.Stdout.
-func captureStdout(t *testing.T, fn func() error) string {
+// captureStdout runs fn with os.Stdout replaced by a pipe and returns what fn
+// wrote to it, along with fn's error. CmdRead writes straight to os.Stdout.
+// The pipe is drained while fn runs, so fn can't block on a full pipe buffer.
+func captureStdout(t *testing.T, fn func() error) (string, error) {
 	t.Helper()
 
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
+
+	var buf bytes.Buffer
+	copied := make(chan error, 1)
+	go func() {
+		_, err := io.Copy(&buf, r)
+		copied <- err
+	}()
+
 	orig := os.Stdout
 	os.Stdout = w
 	defer func() { os.Stdout = orig }()
@@ -171,12 +176,8 @@ func captureStdout(t *testing.T, fn func() error) string {
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
-	out, err := io.ReadAll(r)
-	if err != nil {
+	if err := <-copied; err != nil {
 		t.Fatal(err)
 	}
-	if runErr != nil {
-		t.Fatalf("CmdRead failed: %s", runErr)
-	}
-	return string(out)
+	return buf.String(), runErr
 }
